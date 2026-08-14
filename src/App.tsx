@@ -8,6 +8,7 @@ import AdminLayout from './components/layout/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminDataBackup from './pages/admin/AdminDataBackup'
 import AdminDataRequests from './pages/admin/AdminDataRequests'
+import AdminLogin from './pages/admin/AdminLogin'
 import { Toaster } from './components/ui/toaster'
 
 import Billing from './pages/Billing'
@@ -32,6 +33,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/setup" element={<Setup />} />
         
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="backup" element={<AdminDataBackup />} />

@@ -1,13 +1,17 @@
-import { Outlet, useNavigate, NavLink } from 'react-router-dom'
+import { Outlet, useNavigate, NavLink, Navigate } from 'react-router-dom'
 import { Store, LogOut, ShieldAlert, Database, FileText } from 'lucide-react'
 
 export default function AdminLayout() {
   const navigate = useNavigate()
-  
+  const isAdminAuth = sessionStorage.getItem('adminAuth') === 'true'
+
   const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('user')
-    navigate('/login')
+    sessionStorage.removeItem('adminAuth')
+    navigate('/admin/login')
+  }
+
+  if (!isAdminAuth) {
+    return <Navigate to="/admin/login" replace />
   }
 
   return (
