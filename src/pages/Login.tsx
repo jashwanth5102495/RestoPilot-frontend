@@ -161,8 +161,9 @@ export default function Login() {
               <Label htmlFor="remember" className="font-normal cursor-pointer text-gray-600">Remember me</Label>
             </div>
 
-            <Button type="submit" className="w-full h-12 text-base font-medium">
-              Log In
+            {error && <div className="text-red-500 text-sm">{error}</div>}
+            <Button type="submit" disabled={loading} className="w-full h-12 text-base font-medium">
+              {loading ? 'Logging in...' : 'Log In'}
             </Button>
           </form>
 

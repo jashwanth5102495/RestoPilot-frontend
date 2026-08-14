@@ -9,8 +9,8 @@ export default function OnlineOrders() {
   const { toast } = useToast()
   const [isEnabled, setIsEnabled] = useState(false)
   const [slug, setSlug] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [orders, setOrders] = useState<any[]>([])
+  const [_loading, setLoading] = useState(true)
+  const [orders, _setOrders] = useState<any[]>([])
   
   const publicUrl = slug ? `${window.location.origin}/order/${slug}` : ''
 
@@ -21,7 +21,7 @@ export default function OnlineOrders() {
 
   const fetchSettings = async () => {
     try {
-      const res = await api.get('/auth/me') // Assuming this returns restaurant info, or we can fetch a specific settings endpoint
+      await api.get('/auth/me') // Assuming this returns restaurant info, or we can fetch a specific settings endpoint
       // Actually, we don't have a direct GET for restaurant info on frontend easily yet. 
       // We will assume the user has to toggle it first if it's new.
     } catch (error) {
