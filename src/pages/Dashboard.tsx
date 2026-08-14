@@ -1,0 +1,286 @@
+import { useState, useEffect } from "react"
+import { api } from "@/lib/api"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { IndianRupee, ShoppingBag, TrendingUp, AlertTriangle, Download } from "lucide-react"
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import html2canvas from "html2canvas"
+import jsPDF from "jspdf"
+
+const salesData = [
+  { name: 'Mon', total: 0 },
+  { name: 'Tue', total: 0 },
+  { name: 'Wed', total: 0 },
+  { name: 'Thu', total: 0 },
+  { name: 'Fri', total: 0 },
+  { name: 'Sat', total: 0 },
+  { name: 'Sun', total: 0 },
+]
+
+export default function Dashboard() {
+  const [popularDishes, setPopularDishes] = useState<any[]>([])
+  const [inventoryAlerts, setInventoryAlerts] = useState<any[]>([])
+  const [timeFilter, setTimeFilter] = useState("today")
+
+  const handleDownloadPDF = async () => {
+    const dashboardElement = document.getElementById("dashboard-content");
+    if (!dashboardElement) return;
+
+    try {
+      const canvas = await html2canvas(dashboardElement, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("RestoPilot-Dashboard-Report.pdf");
+    } catch (error) {
+      console.error("Failed to generate PDF", error);
+    }
+  }
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [dishesRes, ingredientsRes] = await Promise.all([
+          api.get('/dishes'),
+          api.get('/ingredients')
+        ])
+        
+        // Use real dishes
+        setPopularDishes(dishesRes.data.data.map((dish: any) => ({
+          id: dish._id,
+          name: dish.name,
+          orders: 0, // No real sales data yet
+          revenue: 0
+        })))
+
+        // Map real ingredients to low stock alerts if currentStock <= minimumStock
+        const alerts = ingredientsRes.data.data
+          .filter((ing: any) => ing.currentStock <= (ing.minimumStock || 5))
+          .map((ing: any) => ({
+            id: ing._id,
+            item: ing.name,
+            current: `${ing.currentStock} ${ing.unit}`,
+            min: `${ing.minimumStock || 0} ${ing.unit}`,
+            status: ing.currentStock === 0 ? 'Out of Stock' : 'Low Stock'
+          }))
+        
+        setInventoryAlerts(alerts)
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error)
+      }
+    }
+    fetchDashboardData()
+  }, [])
+  return (
+    <div className="space-y-6" id="dashboard-content">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Good morning, Owner</h1>
+          <p className="text-gray-500">Here's what's happening at your restaurant {timeFilter === 'today' ? 'today' : 'lately'}.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={timeFilter} onValueChange={setTimeFilter}>
+            <SelectTrigger className="w-[140px] bg-white">
+              <SelectValue placeholder="Select timeframe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button variant="outline" onClick={handleDownloadPDF} className="bg-white gap-2">
+            <Download className="w-4 h-4" />
+            Export PDF
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
+            <IndianRupee className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">₹0</div>
+            <p className="text-xs text-gray-500 font-medium flex items-center mt-1">
+              No sales today
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Orders</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">0</div>
+            <p className="text-xs text-gray-500 font-medium flex items-center mt-1">
+              No orders today
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Order Value</CardTitle>
+            <TrendingUp className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">₹0</div>
+            <p className="text-xs text-gray-500 font-medium flex items-center mt-1">
+              No data
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-orange-200 bg-orange-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-orange-800">Low Stock Items</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{inventoryAlerts.length}</div>
+            <p className="text-xs text-orange-700 font-medium flex items-center mt-1">
+              {inventoryAlerts.length > 0 ? "Needs attention" : "All clear"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-7">
+        <Card className="col-span-7 lg:col-span-4">
+          <CardHeader>
+            <CardTitle>Sales Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-0">
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F97316" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#F97316" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Sales']}
+                  />
+                  <Area type="monotone" dataKey="total" stroke="#F97316" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-7 lg:col-span-3 flex flex-col">
+          <CardHeader>
+            <CardTitle>Top Selling Dishes</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1">
+            <div className="space-y-6">
+              {popularDishes.length > 0 ? popularDishes.map((dish, i) => (
+                <div key={dish.id} className="flex items-center p-3 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-100 transition-colors">
+                  <div className="w-8 text-sm font-bold text-primary">{i + 1}</div>
+                  <div className="ml-2 space-y-1 flex-1">
+                    <p className="text-sm font-semibold leading-none text-gray-900">{dish.name}</p>
+                    <p className="text-xs text-gray-500">{dish.orders} sold</p>
+                  </div>
+                  <div className="font-medium text-sm text-gray-900">
+                    ₹{dish.revenue.toLocaleString()}
+                  </div>
+                </div>
+              )) : (
+                <p className="text-sm text-gray-500 text-center py-8">No dishes added yet.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Inventory Alerts</CardTitle>
+            <button className="text-sm font-medium text-primary hover:underline">View Inventory</button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {inventoryAlerts.length > 0 ? inventoryAlerts.map((alert) => (
+                <div key={alert.id} className="flex items-center justify-between border-b border-gray-100 last:border-0 pb-4 last:pb-0">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{alert.item}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-500">Min: {alert.min}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center justify-end gap-1.5 mb-1">
+                      <div className={`w-1.5 h-1.5 rounded-full ${alert.status === 'Out of Stock' ? 'bg-red-500' : 'bg-orange-500'}`}></div>
+                      <span className="text-sm font-bold text-gray-900">{alert.current}</span>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${alert.status === 'Out of Stock' ? 'text-red-600 bg-red-50' : 'text-orange-600 bg-orange-50'}`}>{alert.status}</span>
+                  </div>
+                </div>
+              )) : (
+                <p className="text-sm text-gray-500 text-center py-4">No inventory alerts.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 rounded-tl-md rounded-bl-md">Order ID</th>
+                    <th className="px-4 py-2">Customer</th>
+                    <th className="px-4 py-2">Amount</th>
+                    <th className="px-4 py-2">Status</th>
+                    <th className="px-4 py-2 rounded-tr-md rounded-br-md">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { id: '#RP1024', name: 'Rahul', amount: '₹780', status: 'Completed', time: '12:42 PM' },
+                    { id: '#RP1025', name: 'Sneha', amount: '₹1,240', status: 'Completed', time: '12:55 PM' },
+                    { id: '#RP1026', name: 'Amit', amount: '₹450', status: 'Pending', time: '1:10 PM' },
+                    { id: '#RP1027', name: 'Priya', amount: '₹2,100', status: 'Pending', time: '1:15 PM' },
+                  ].map((order, i) => (
+                    <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{order.id}</td>
+                      <td className="px-4 py-3 text-gray-600">{order.name}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">{order.amount}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          order.status === 'Completed' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{order.time}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
