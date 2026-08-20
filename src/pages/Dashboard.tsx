@@ -5,6 +5,7 @@ import { IndianRupee, ShoppingBag, TrendingUp, AlertTriangle, Download, Building
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
 
@@ -19,6 +20,7 @@ const salesData = [
 ]
 
 export default function Dashboard() {
+  const { toast } = useToast()
   const [popularDishes, setPopularDishes] = useState<any[]>([])
   const [inventoryAlerts, setInventoryAlerts] = useState<any[]>([])
   const [timeFilter, setTimeFilter] = useState("today")
@@ -49,6 +51,30 @@ export default function Dashboard() {
     }
   }
 
+  const handleSwitchContext = async () => {
+    if (!selectedBranch || selectedBranch === 'overall') return
+    try {
+      const res = await api.post('/auth/switch-branch', { branchId: selectedBranch })
+      const { accessToken, user } = res.data.data
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('user', JSON.stringify(user))
+      
+      toast({
+        title: "Active Context Switched",
+        description: `Restaurant set to: ${user?.restaurant?.name || 'Selected branch'}`
+      })
+      
+      window.location.reload()
+    } catch (err) {
+      console.error("Failed to switch context:", err)
+      toast({
+        title: "Switch Failed",
+        description: "Failed to switch active restaurant context.",
+        variant: "destructive"
+      })
+    }
+  }
+
   // Fetch branches and initial static lists on mount
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -56,7 +82,9 @@ export default function Dashboard() {
         const branchRes = await api.get('/restaurants/branches')
         const branchList = branchRes.data.data || []
         setBranches(branchList)
-        if (branchList.length > 0 && !selectedBranch) {
+        if (branchList.length > 1 && !selectedBranch) {
+          setSelectedBranch('overall') // Default to overall if multiple branches exist
+        } else if (branchList.length > 0 && !selectedBranch) {
           setSelectedBranch(branchList[0]._id)
         }
       } catch (e) {
@@ -126,18 +154,30 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           {branches.length > 1 && (
-            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-              <SelectTrigger className="w-[200px] bg-white">
-                <SelectValue placeholder="Select Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch: any) => (
-                  <SelectItem key={branch._id} value={branch._id}>
-                    {branch.name}{!branch.parentRestaurantId ? ' (Main)' : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                <SelectTrigger className="w-[200px] bg-white">
+                  <SelectValue placeholder="Select Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="overall">Overall (All Branches)</SelectItem>
+                  {branches.map((branch: any) => (
+                    <SelectItem key={branch._id} value={branch._id}>
+                      {branch.name}{!branch.parentRestaurantId ? ' (Main)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedBranch !== 'overall' && selectedBranch !== '' && (
+                <Button 
+                  onClick={handleSwitchContext} 
+                  variant="outline"
+                  className="bg-primary hover:bg-primary/90 text-white border-transparent h-9 px-3"
+                >
+                  Switch
+                </Button>
+              )}
+            </div>
           )}
           <Select value={timeFilter} onValueChange={setTimeFilter}>
             <SelectTrigger className="w-[140px] bg-white">
