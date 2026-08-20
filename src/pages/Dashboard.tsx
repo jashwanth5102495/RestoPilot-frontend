@@ -24,6 +24,12 @@ export default function Dashboard() {
   const [timeFilter, setTimeFilter] = useState("today")
   const [branches, setBranches] = useState<any[]>([])
   const [selectedBranch, setSelectedBranch] = useState<string>('')
+  const [dashboardStats, setDashboardStats] = useState({
+    totalOrders: 0,
+    totalSales: 0,
+    lowStockItems: 0,
+    recentOrders: []
+  })
 
   const handleDownloadPDF = async () => {
     const dashboardElement = document.getElementById("dashboard-content");
@@ -43,6 +49,7 @@ export default function Dashboard() {
     }
   }
 
+  // Fetch branches and initial static lists on mount
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -88,6 +95,28 @@ export default function Dashboard() {
     }
     fetchDashboardData()
   }, [])
+
+  // Fetch dashboard stats when selectedBranch changes
+  useEffect(() => {
+    if (!selectedBranch) return
+
+    const fetchBranchStats = async () => {
+      try {
+        const res = await api.get(`/restaurants/${selectedBranch}/dashboard`)
+        setDashboardStats(res.data.data || {
+          totalOrders: 0,
+          totalSales: 0,
+          lowStockItems: 0,
+          recentOrders: []
+        })
+      } catch (err) {
+        console.error("Failed to fetch branch stats:", err)
+      }
+    }
+
+    fetchBranchStats()
+  }, [selectedBranch])
+
   return (
     <div className="space-y-6" id="dashboard-content">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -133,13 +162,13 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
             <IndianRupee className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">₹0</div>
+            <div className="text-2xl font-bold text-gray-900">₹{dashboardStats.totalSales.toLocaleString()}</div>
             <p className="text-xs text-gray-500 font-medium flex items-center mt-1">
-              No sales today
+              {dashboardStats.totalSales > 0 ? "Overall sales" : "No sales recorded"}
             </p>
           </CardContent>
         </Card>
@@ -149,9 +178,9 @@ export default function Dashboard() {
             <ShoppingBag className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">0</div>
+            <div className="text-2xl font-bold text-gray-900">{dashboardStats.totalOrders}</div>
             <p className="text-xs text-gray-500 font-medium flex items-center mt-1">
-              No orders today
+              {dashboardStats.totalOrders > 0 ? "Overall orders" : "No orders recorded"}
             </p>
           </CardContent>
         </Card>
@@ -161,9 +190,11 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">₹0</div>
+            <div className="text-2xl font-bold text-gray-900">
+              ₹{(dashboardStats.totalOrders > 0 ? Math.round(dashboardStats.totalSales / dashboardStats.totalOrders) : 0).toLocaleString()}
+            </div>
             <p className="text-xs text-gray-500 font-medium flex items-center mt-1">
-              No data
+              {dashboardStats.totalOrders > 0 ? "Based on all orders" : "No data"}
             </p>
           </CardContent>
         </Card>
@@ -173,9 +204,9 @@ export default function Dashboard() {
             <AlertTriangle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{inventoryAlerts.length}</div>
+            <div className="text-2xl font-bold text-orange-600">{dashboardStats.lowStockItems}</div>
             <p className="text-xs text-orange-700 font-medium flex items-center mt-1">
-              {inventoryAlerts.length > 0 ? "Needs attention" : "All clear"}
+              {dashboardStats.lowStockItems > 0 ? "Needs attention" : "All clear"}
             </p>
           </CardContent>
         </Card>
@@ -282,26 +313,31 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: '#RP1024', name: 'Rahul', amount: '₹780', status: 'Completed', time: '12:42 PM' },
-                    { id: '#RP1025', name: 'Sneha', amount: '₹1,240', status: 'Completed', time: '12:55 PM' },
-                    { id: '#RP1026', name: 'Amit', amount: '₹450', status: 'Pending', time: '1:10 PM' },
-                    { id: '#RP1027', name: 'Priya', amount: '₹2,100', status: 'Pending', time: '1:15 PM' },
-                  ].map((order, i) => (
-                    <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
-                      <td className="px-4 py-3 font-medium text-gray-900">{order.id}</td>
-                      <td className="px-4 py-3 text-gray-600">{order.name}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{order.amount}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          order.status === 'Completed' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
-                        }`}>
-                          {order.status}
-                        </span>
+                  {dashboardStats.recentOrders && dashboardStats.recentOrders.length > 0 ? (
+                    dashboardStats.recentOrders.map((order: any) => (
+                      <tr key={order._id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
+                        <td className="px-4 py-3 font-medium text-gray-900">{order.orderNumber}</td>
+                        <td className="px-4 py-3 text-gray-600">{order.customerInfo?.name || 'Walk-in'}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">₹{order.total}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            order.orderStatus === 'COMPLETED' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
+                          }`}>
+                            {order.orderStatus}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">
+                          {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                        No recent orders.
                       </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{order.time}</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
