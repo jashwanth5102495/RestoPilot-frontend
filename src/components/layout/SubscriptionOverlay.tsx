@@ -31,7 +31,7 @@ export default function SubscriptionOverlay({ children }: { children: React.Reac
 
   const location = useLocation()
   const isSubscriptionPage = location.pathname === '/subscription'
-  const isLocked = !isSubscriptionPage && (status === 'EXPIRED' || status === 'PENDING')
+  const isLocked = false // Bypass subscription check for development & testing
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
