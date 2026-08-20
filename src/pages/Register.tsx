@@ -10,19 +10,15 @@ export default function Register() {
   const navigate = useNavigate()
   
   const [formData, setFormData] = useState({
-    shopName: '',
+    restaurantName: '',
     ownerName: '',
-    mobileNumber: '',
+    phone: '',
     email: '',
-    gstNumber: '',
-    agentCode: '',
     address: '',
-    village: '',
-    district: '',
+    city: '',
     state: '',
     pincode: '',
-    subscriptionPlan: 'Basic',
-    subscriptionAmount: '',
+    restaurantType: 'casual',
     password: '',
     confirmPassword: ''
   })
@@ -162,10 +158,10 @@ export default function Register() {
           <div className="space-y-8 pt-4 pb-12">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-            Register Shop
+            Register Restaurant
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Create a new fertilizer shop account.
+            Create a new restaurant account.
           </p>
         </div>
 
@@ -179,11 +175,11 @@ export default function Register() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <div className="space-y-2">
-              <Label htmlFor="shopName">Shop Name</Label>
+              <Label htmlFor="restaurantName">Restaurant Name</Label>
               <Input 
-                id="shopName" 
+                id="restaurantName" 
                 placeholder="Sri Ram Fertilizers" 
-                value={formData.shopName}
+                value={formData.restaurantName}
                 onChange={handleChange}
                 required
               />
@@ -201,12 +197,12 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mobileNumber">Mobile Number</Label>
+              <Label htmlFor="phone">Phone Number</Label>
               <Input 
-                id="mobileNumber" 
+                id="phone" 
                 type="tel"
                 placeholder="+91 9876543210" 
-                value={formData.mobileNumber}
+                value={formData.phone}
                 onChange={handleChange}
                 required
               />
@@ -225,23 +221,19 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="gstNumber">GST Number (Optional)</Label>
-              <Input 
-                id="gstNumber" 
-                placeholder="22AAAAA0000A1Z5" 
-                value={formData.gstNumber}
+              <Label htmlFor="restaurantType">Restaurant Type</Label>
+              <select 
+                id="restaurantType"
+                value={formData.restaurantType}
                 onChange={handleChange}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="agentCode">Agent Code</Label>
-              <Input 
-                id="agentCode" 
-                placeholder="AGT-1234" 
-                value={formData.agentCode}
-                onChange={handleChange}
-              />
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="casual">Casual Dining</option>
+                <option value="fine_dine">Fine Dining</option>
+                <option value="fast_food">Fast Food</option>
+                <option value="cafe">Cafe</option>
+                <option value="cloud_kitchen">Cloud Kitchen</option>
+              </select>
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -255,14 +247,10 @@ export default function Register() {
               />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:col-span-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:col-span-2">
               <div className="space-y-2">
-                <Label htmlFor="village">Village</Label>
-                <Input id="village" value={formData.village} onChange={handleChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="district">District</Label>
-                <Input id="district" value={formData.district} onChange={handleChange} required />
+                <Label htmlFor="city">City</Label>
+                <Input id="city" value={formData.city} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="state">State</Label>
@@ -272,32 +260,6 @@ export default function Register() {
                 <Label htmlFor="pincode">Pincode</Label>
                 <Input id="pincode" value={formData.pincode} onChange={handleChange} required />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="subscriptionPlan">Subscription Plan</Label>
-              <select 
-                id="subscriptionPlan"
-                value={formData.subscriptionPlan}
-                onChange={handleChange}
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="Basic">Basic</option>
-                <option value="Premium">Premium</option>
-                <option value="Enterprise">Enterprise</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="subscriptionAmount">Subscription Amount (₹)</Label>
-              <Input 
-                id="subscriptionAmount" 
-                type="number"
-                placeholder="e.g. 1500" 
-                value={formData.subscriptionAmount}
-                onChange={handleChange}
-                required
-              />
             </div>
 
             <div className="space-y-2 md:col-span-2">
