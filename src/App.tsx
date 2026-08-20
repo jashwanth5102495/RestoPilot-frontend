@@ -8,6 +8,7 @@ import AdminLayout from './components/layout/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminDataBackup from './pages/admin/AdminDataBackup'
 import AdminDataRequests from './pages/admin/AdminDataRequests'
+import AdminAgents from './pages/admin/AdminAgents'
 import AdminLogin from './pages/admin/AdminLogin'
 import { Toaster } from './components/ui/toaster'
 
@@ -39,6 +40,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="backup" element={<AdminDataBackup />} />
           <Route path="requests" element={<AdminDataRequests />} />
+          <Route path="agents" element={<AdminAgents />} />
         </Route>
         
         <Route path="/order/:slug" element={<CustomerOrder />} />

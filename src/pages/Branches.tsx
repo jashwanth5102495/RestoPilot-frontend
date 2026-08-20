@@ -85,19 +85,20 @@ export default function Branches() {
     window.open(url, '_blank')
   }
 
-  const handleVerifyAgentCode = () => {
-    if (agentCodeInput.trim() === 'AGENT2026') {
+  const handleVerifyAgentCode = async () => {
+    try {
+      const res = await api.post('/restaurants/verify-agent', { code: agentCodeInput })
       setIsAgentMode(true)
       setShowCodeInput(false)
       setWizardStep(1)
       toast({
         title: "Agent Access Granted",
-        description: "You can now add a new branch directly.",
+        description: `Welcome Agent, ${res.data.data.agentName || 'Agent'}. You can now configure this branch setup.`,
       })
-    } else {
+    } catch (error: any) {
       toast({
         title: "Invalid Agent Code",
-        description: "Please enter the correct agent setup code.",
+        description: error.response?.data?.message || "Please enter the correct agent setup code.",
         variant: "destructive"
       })
     }
