@@ -82,7 +82,13 @@ export default function Dashboard() {
         const branchRes = await api.get('/restaurants/branches')
         const branchList = branchRes.data.data || []
         setBranches(branchList)
-        if (branchList.length > 1 && !selectedBranch) {
+        
+        const userStored = JSON.parse(localStorage.getItem('user') || '{}')
+        const currentActiveId = userStored?.restaurant?._id
+        
+        if (currentActiveId && branchList.some((b: any) => b._id === currentActiveId)) {
+          setSelectedBranch(currentActiveId)
+        } else if (branchList.length > 1 && !selectedBranch) {
           setSelectedBranch('overall') // Default to overall if multiple branches exist
         } else if (branchList.length > 0 && !selectedBranch) {
           setSelectedBranch(branchList[0]._id)
