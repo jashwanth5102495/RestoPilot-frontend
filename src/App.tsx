@@ -21,6 +21,7 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Purchases from './pages/Purchases'
 import Suppliers from './pages/Suppliers'
+import Branches from './pages/Branches'
 import Recipes from './pages/Recipes'
 import Subscription from './pages/Subscription'
 import DataArchive from './pages/DataArchive'
@@ -53,6 +54,7 @@ function App() {
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/purchases" element={<Purchases />} />
           <Route path="/suppliers" element={<Suppliers />} />
+          <Route path="/branches" element={<Branches />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/subscription" element={<Subscription />} />

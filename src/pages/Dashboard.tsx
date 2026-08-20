@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { api } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { IndianRupee, ShoppingBag, TrendingUp, AlertTriangle, Download } from "lucide-react"
+import { IndianRupee, ShoppingBag, TrendingUp, AlertTriangle, Download, Building2 } from "lucide-react"
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,8 @@ export default function Dashboard() {
   const [popularDishes, setPopularDishes] = useState<any[]>([])
   const [inventoryAlerts, setInventoryAlerts] = useState<any[]>([])
   const [timeFilter, setTimeFilter] = useState("today")
+  const [branches, setBranches] = useState<any[]>([])
+  const [selectedBranch, setSelectedBranch] = useState<string>('')
 
   const handleDownloadPDF = async () => {
     const dashboardElement = document.getElementById("dashboard-content");
@@ -43,6 +45,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      try {
+        const branchRes = await api.get('/restaurants/branches')
+        const branchList = branchRes.data.data || []
+        setBranches(branchList)
+        if (branchList.length > 0 && !selectedBranch) {
+          setSelectedBranch(branchList[0]._id)
+        }
+      } catch (e) {
+        console.error('Failed to fetch branches:', e)
+      }
+      
       try {
         const [dishesRes, ingredientsRes] = await Promise.all([
           api.get('/dishes'),
@@ -83,6 +96,20 @@ export default function Dashboard() {
           <p className="text-gray-500">Here's what's happening at your restaurant {timeFilter === 'today' ? 'today' : 'lately'}.</p>
         </div>
         <div className="flex items-center gap-3">
+          {branches.length > 1 && (
+            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+              <SelectTrigger className="w-[200px] bg-white">
+                <SelectValue placeholder="Select Branch" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((branch: any) => (
+                  <SelectItem key={branch._id} value={branch._id}>
+                    {branch.name}{!branch.parentRestaurantId ? ' (Main)' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={timeFilter} onValueChange={setTimeFilter}>
             <SelectTrigger className="w-[140px] bg-white">
               <SelectValue placeholder="Select timeframe" />

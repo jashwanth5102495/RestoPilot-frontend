@@ -22,7 +22,7 @@ export default function OnlineOrders() {
   const fetchSettings = async () => {
     try {
       await api.get('/auth/me') // Assuming this returns restaurant info, or we can fetch a specific settings endpoint
-      // Actually, we don't have a direct GET for restaurant info on frontend easily yet. 
+      // Actually, we don't have a direct GET for restaurant info on frontend easily yet.
       // We will assume the user has to toggle it first if it's new.
     } catch (error) {
       console.error(error)

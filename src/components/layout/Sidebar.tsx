@@ -14,7 +14,8 @@ import {
   LogOut,
   Globe,
   CreditCard,
-  Database
+  Database,
+  GitBranch
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -31,6 +32,7 @@ const managementNav = [
   { name: 'Inventory', to: '/inventory', icon: Package },
   { name: 'Purchases', to: '/purchases', icon: Truck },
   { name: 'Suppliers', to: '/suppliers', icon: Users },
+  { name: 'Branches', to: '/branches', icon: GitBranch },
 ]
 
 const analyticsNav = [
@@ -45,6 +47,10 @@ const systemNav = [
 
 export default function Sidebar() {
   const navigate = useNavigate()
+  
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const restaurantName = user?.restaurant?.name || 'Restaurant'
+  const initials = restaurantName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken')
@@ -163,10 +169,10 @@ export default function Sidebar() {
       <div className="p-4 border-t border-gray-200">
         <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
-            SG
+            {initials}
           </div>
           <div className="flex-1 overflow-hidden">
-            <h4 className="text-sm font-medium text-gray-900 truncate">Spice Garden</h4>
+            <h4 className="text-sm font-medium text-gray-900 truncate">{restaurantName}</h4>
             <p className="text-xs text-gray-500 truncate">Restaurant Owner</p>
           </div>
           <button 

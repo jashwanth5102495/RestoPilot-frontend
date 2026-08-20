@@ -5,6 +5,9 @@ import { useLocation } from 'react-router-dom'
 export default function Topbar() {
   const location = useLocation()
   
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const restaurantName = user?.restaurant?.name || 'Restaurant'
+  
   // Format the path into a readable title
   const path = location.pathname.split('/')[1] || 'Dashboard'
   const title = path.charAt(0).toUpperCase() + path.slice(1)
@@ -33,7 +36,7 @@ export default function Topbar() {
         </button>
         
         <div className="hidden md:flex items-center gap-2 ml-2 pl-4 border-l border-gray-200">
-          <span className="text-sm font-medium text-gray-700">Spice Garden</span>
+          <span className="text-sm font-medium text-gray-700">{restaurantName}</span>
         </div>
       </div>
     </header>

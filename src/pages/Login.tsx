@@ -10,8 +10,8 @@ export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [_error, setError] = useState('')
+  const [_loading, setLoading] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,9 +161,9 @@ export default function Login() {
               <Label htmlFor="remember" className="font-normal cursor-pointer text-gray-600">Remember me</Label>
             </div>
 
-            {error && <div className="text-red-500 text-sm">{error}</div>}
-            <Button type="submit" disabled={loading} className="w-full h-12 text-base font-medium">
-              {loading ? 'Logging in...' : 'Log In'}
+            {_error && <div className="text-red-500 text-sm">{_error}</div>}
+            <Button type="submit" disabled={_loading} className="w-full h-12 text-base font-medium">
+              {_loading ? 'Logging in...' : 'Log In'}
             </Button>
           </form>
 
