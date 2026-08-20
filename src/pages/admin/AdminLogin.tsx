@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ShieldAlert, Lock, User } from 'lucide-react'
-
-const ADMIN_USERNAME = 'admin'
-const ADMIN_PASSWORD = 'admin123'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
@@ -15,20 +13,35 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
-    setTimeout(() => {
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        sessionStorage.setItem('adminAuth', 'true')
-        navigate('/admin')
-      } else {
-        setError('Invalid admin credentials')
+    try {
+      // Map username 'admin' to 'admin@restopilot.com' automatically for ease of login
+      const email = username.includes('@') ? username : `${username}@restopilot.com`
+      
+      const res = await api.post('/auth/login', { email, password })
+      const { user, accessToken } = res.data.data
+
+      if (user.role !== 'SUPER_ADMIN') {
+        setError('Unauthorized: Only Super Administrators can sign in here.')
+        setLoading(false)
+        return
       }
+
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('user', JSON.stringify(user))
+      sessionStorage.setItem('adminAuth', 'true')
+      
+      navigate('/admin')
+    } catch (err: any) {
+      console.error(err)
+      setError(err.response?.data?.message || 'Invalid admin credentials or connection error.')
+    } finally {
       setLoading(false)
-    }, 400)
+    }
   }
 
   return (
