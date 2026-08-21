@@ -35,6 +35,7 @@ export default function Inventory() {
 
   // Quick purchase form states
   const [ingredientNameInput, setIngredientNameInput] = useState('')
+  const [unitInput, setUnitInput] = useState('g')
   const [quantity, setQuantity] = useState('')
   const [totalPrice, setTotalPrice] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
@@ -79,7 +80,7 @@ export default function Inventory() {
   const afterStockText = selectedIngredient && quantity ? `${selectedIngredient.currentStock + Number(quantity)} ${selectedIngredient.unit}` : (quantity ? `${quantity} units` : '--')
 
   const handleAddStock = async () => {
-    if (!ingredientNameInput || !quantity || !totalPrice || !selectedSupplierId) {
+    if (!ingredientNameInput || !quantity || !totalPrice) {
       toast({
         title: "Incomplete Fields",
         description: "Please fill out all the fields to record the purchase.",
@@ -91,13 +92,13 @@ export default function Inventory() {
     setSubmitting(true)
     try {
       let ingId = selectedIngredient?._id
-      let ingUnit = selectedIngredient?.unit || 'units'
+      let ingUnit = selectedIngredient?.unit || unitInput
       
       // Create ingredient if it doesn't exist
       if (!selectedIngredient) {
         const ingRes = await api.post('/ingredients', {
           name: ingredientNameInput.trim(),
-          unit: 'units',
+          unit: unitInput,
           currentStock: 0,
           minimumStock: 5,
           averageCost: 0
@@ -106,7 +107,6 @@ export default function Inventory() {
       }
 
       await api.post('/purchases', {
-        supplierId: selectedSupplierId,
         paymentStatus: 'PAID',
         purchaseDate: new Date(),
         notes: `Inventory quick adjustment receipt`,
@@ -164,19 +164,56 @@ export default function Inventory() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="ingredient">Ingredient</Label>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="ingredient">Ingredient</Label>
                   <Input 
                     id="ingredient" 
-                    placeholder="Type or select ingredient..."
+                    placeholder="e.g. Chicken"
                     value={ingredientNameInput}
                     onChange={(e: any) => setIngredientNameInput(e.target.value)}
                     list="ingredient-suggestions"
                   />
                   <datalist id="ingredient-suggestions">
+                    <option value="Chicken" />
+                    <option value="Mutton" />
+                    <option value="Fish" />
+                    <option value="Paneer" />
+                    <option value="Tomato" />
+                    <option value="Onion" />
+                    <option value="Garlic" />
+                    <option value="Ginger" />
+                    <option value="Butter" />
+                    <option value="Cream" />
+                    <option value="Milk" />
+                    <option value="Cheese" />
+                    <option value="Flour" />
+                    <option value="Sugar" />
+                    <option value="Salt" />
+                    <option value="Rice" />
+                    <option value="Oil" />
+                    <option value="Ghee" />
                     {ingredients.map(i => <option key={i._id} value={i.name} />)}
                   </datalist>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="unit">Unit</Label>
+                  <select 
+                    id="unit"
+                    value={unitInput}
+                    onChange={(e) => setUnitInput(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="g">g</option>
+                    <option value="kg">kg</option>
+                    <option value="ml">ml</option>
+                    <option value="l">l</option>
+                    <option value="pcs">pcs</option>
+                    <option value="pkts">pkts</option>
+                  </select>
+                </div>
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="qty">Quantity</Label>
@@ -198,18 +235,6 @@ export default function Inventory() {
                     onChange={(e: any) => setTotalPrice(e.target.value)}
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier</Label>
-                <select 
-                  id="supplier" 
-                  value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select supplier...</option>
-                  {suppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-                </select>
               </div>
               
               <div className="mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
