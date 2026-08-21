@@ -34,7 +34,7 @@ export default function Inventory() {
   const [submitting, setSubmitting] = useState(false)
 
   // Quick purchase form states
-  const [selectedIngredientId, setSelectedIngredientId] = useState('')
+  const [ingredientNameInput, setIngredientNameInput] = useState('')
   const [quantity, setQuantity] = useState('')
   const [totalPrice, setTotalPrice] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
@@ -74,12 +74,12 @@ export default function Inventory() {
   const outOfStockCount = ingredients.filter(i => i.currentStock <= 0).length
   const totalStockValue = ingredients.reduce((sum, i) => sum + (Math.max(0, i.currentStock) * (i.averageCost || 0)), 0)
 
-  const selectedIngredient = ingredients.find(i => i._id === selectedIngredientId)
+  const selectedIngredient = ingredients.find(i => i.name.toLowerCase() === ingredientNameInput.toLowerCase().trim())
   const currentStockText = selectedIngredient ? `${selectedIngredient.currentStock} ${selectedIngredient.unit}` : '--'
-  const afterStockText = selectedIngredient && quantity ? `${selectedIngredient.currentStock + Number(quantity)} ${selectedIngredient.unit}` : '--'
+  const afterStockText = selectedIngredient && quantity ? `${selectedIngredient.currentStock + Number(quantity)} ${selectedIngredient.unit}` : (quantity ? `${quantity} units` : '--')
 
   const handleAddStock = async () => {
-    if (!selectedIngredientId || !quantity || !totalPrice || !selectedSupplierId) {
+    if (!ingredientNameInput || !quantity || !totalPrice || !selectedSupplierId) {
       toast({
         title: "Incomplete Fields",
         description: "Please fill out all the fields to record the purchase.",
@@ -90,27 +90,41 @@ export default function Inventory() {
 
     setSubmitting(true)
     try {
-      const ing = ingredients.find(i => i._id === selectedIngredientId)
+      let ingId = selectedIngredient?._id
+      let ingUnit = selectedIngredient?.unit || 'units'
+      
+      // Create ingredient if it doesn't exist
+      if (!selectedIngredient) {
+        const ingRes = await api.post('/ingredients', {
+          name: ingredientNameInput.trim(),
+          unit: 'units',
+          currentStock: 0,
+          minimumStock: 5,
+          averageCost: 0
+        })
+        ingId = ingRes.data.data._id
+      }
+
       await api.post('/purchases', {
         supplierId: selectedSupplierId,
         paymentStatus: 'PAID',
         purchaseDate: new Date(),
         notes: `Inventory quick adjustment receipt`,
         items: [{
-          ingredientId: selectedIngredientId,
+          ingredientId: ingId,
           quantity: Number(quantity),
           unitCost: Number(totalPrice) / Number(quantity),
-          unit: ing?.unit || 'pcs'
+          unit: ingUnit
         }]
       })
 
       toast({
         title: "Stock Added Successfully",
-        description: `Successfully added ${quantity} ${ing?.unit || ''} to ${ing?.name || 'ingredient'}.`
+        description: `Successfully added ${quantity} ${ingUnit} to ${ingredientNameInput}.`
       })
 
       // Reset form states
-      setSelectedIngredientId('')
+      setIngredientNameInput('')
       setQuantity('')
       setTotalPrice('')
       setSelectedSupplierId('')
@@ -152,15 +166,16 @@ export default function Inventory() {
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="ingredient">Ingredient</Label>
-                <select 
-                  id="ingredient" 
-                  value={selectedIngredientId}
-                  onChange={(e) => setSelectedIngredientId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select ingredient...</option>
-                  {ingredients.map(i => <option key={i._id} value={i._id}>{i.name} ({i.unit})</option>)}
-                </select>
+                  <Input 
+                    id="ingredient" 
+                    placeholder="Type or select ingredient..."
+                    value={ingredientNameInput}
+                    onChange={(e: any) => setIngredientNameInput(e.target.value)}
+                    list="ingredient-suggestions"
+                  />
+                  <datalist id="ingredient-suggestions">
+                    {ingredients.map(i => <option key={i._id} value={i.name} />)}
+                  </datalist>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

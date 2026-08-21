@@ -39,6 +39,7 @@ export default function Menu() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editDishId, setEditDishId] = useState<string | null>(null)
 
   // Form states
   const [dishName, setDishName] = useState('')
@@ -150,6 +151,56 @@ export default function Menu() {
     setRecipeItems(prev => prev.filter(item => item.ingredientId !== id))
   }
 
+  const openEditDialog = async (dish: any) => {
+    setEditDishId(dish._id)
+    setDishName(dish.name)
+    setSelectedCategoryId(dish.categoryId?._id || '')
+    setPrice(dish.price.toString())
+    setTaxRate(dish.taxRate?.toString() || '5')
+    setDescription(dish.description || '')
+    
+    // Fetch its recipe
+    try {
+      const res = await api.get('/recipes')
+      const recipes = res.data.data
+      const myRecipe = recipes.find((r: any) => r._id === dish._id)
+      if (myRecipe && myRecipe.recipe && myRecipe.recipe.items) {
+        // Map the items to include names
+        const loadedItems = myRecipe.recipe.items.map((item: any) => {
+          const ing = ingredients.find(i => i._id === item.ingredientId)
+          return {
+            ingredientId: item.ingredientId,
+            name: ing ? ing.name : 'Unknown',
+            quantity: item.quantity,
+            unit: ing ? ing.unit : ''
+          }
+        })
+        setRecipeItems(loadedItems)
+      } else {
+        setRecipeItems([])
+      }
+    } catch (err) {
+      console.error(err)
+      setRecipeItems([])
+    }
+    
+    setIsDialogOpen(true)
+  }
+
+  const resetForm = () => {
+    setEditDishId(null)
+    setDishName('')
+    setSelectedCategoryId('')
+    setPrice('')
+    setTaxRate('5')
+    setDescription('')
+    setRecipeItems([])
+    setSelectedIngId('')
+    setIngQuantity('')
+    setShowNewCategoryForm(false)
+    setNewCategoryName('')
+  }
+
   const handleSaveDish = async () => {
     if (!dishName || !selectedCategoryId || !price) {
       toast({
@@ -162,43 +213,39 @@ export default function Menu() {
 
     setSubmitting(true)
     try {
-      const dishRes = await api.post('/dishes', {
+      const dishPayload = {
         name: dishName,
         categoryId: selectedCategoryId,
         price: Number(price),
         taxRate: Number(taxRate),
-        description,
-        isAvailable: true
-      })
-      
-      const createdDish = dishRes.data.data
-
-      if (recipeItems.length > 0) {
-        await api.post('/recipes', {
-          dishId: createdDish._id,
-          items: recipeItems.map(item => ({
-            ingredientId: item.ingredientId,
-            quantity: item.quantity,
-            unit: item.unit
-          }))
-        })
+        description
       }
 
-      toast({
-        title: "Dish Saved",
-        description: `"${dishName}" has been successfully added to your menu.`,
-      })
+      let savedDishId = editDishId
 
-      // Reset form states
-      setDishName('')
-      setSelectedCategoryId('')
-      setPrice('')
-      setTaxRate('5')
-      setDescription('')
-      setRecipeItems([])
+      if (editDishId) {
+        await api.put(`/dishes/${editDishId}`, dishPayload)
+        toast({ title: "Dish Updated", description: "Dish details updated successfully." })
+      } else {
+        const dishRes = await api.post('/dishes', dishPayload)
+        savedDishId = dishRes.data.data._id
+        toast({ title: "Dish Added", description: "New dish created successfully." })
+      }
+
+      // Save recipe
+      if (recipeItems.length > 0 && savedDishId) {
+        const recipePayload = {
+          dishId: savedDishId,
+          items: recipeItems.map(item => ({
+            ingredientId: item.ingredientId,
+            quantity: Number(item.quantity)
+          }))
+        }
+        await api.post('/recipes', recipePayload)
+      }
+
       setIsDialogOpen(false)
-
-      // Refresh dishes list
+      resetForm()
       fetchMenuData()
     } catch (error: any) {
       toast({
@@ -260,7 +307,20 @@ export default function Menu() {
                     placeholder="e.g. Butter Chicken" 
                     value={dishName}
                     onChange={(e: any) => setDishName(e.target.value)}
+                    list="dish-suggestions"
                   />
+                  <datalist id="dish-suggestions">
+                    <option value="Butter Chicken" />
+                    <option value="Paneer Butter Masala" />
+                    <option value="Chicken Biryani" />
+                    <option value="Veg Biryani" />
+                    <option value="Dal Makhani" />
+                    <option value="Masala Dosa" />
+                    <option value="Idli Sambar" />
+                    <option value="Tandoori Roti" />
+                    <option value="Garlic Naan" />
+                    <option value="Gulab Jamun" />
+                  </datalist>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
@@ -469,6 +529,9 @@ export default function Menu() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem onClick={() => openEditDialog(dish)} className="cursor-pointer flex items-center">
+                        <Edit2 className="w-4 h-4 mr-2" /> Edit
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDeleteDish(dish._id)} className="cursor-pointer text-red-600 flex items-center focus:bg-red-50 focus:text-red-700">
                         <Trash2 className="w-4 h-4 mr-2" /> Delete
                       </DropdownMenuItem>
