@@ -47,6 +47,11 @@ export default function Menu() {
   const [taxRate, setTaxRate] = useState('5')
   const [description, setDescription] = useState('')
 
+  // Inline category creation states
+  const [showNewCategoryForm, setShowNewCategoryForm] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
+
   // Recipe builder state
   const [recipeItems, setRecipeItems] = useState<any[]>([])
   const [selectedIngId, setSelectedIngId] = useState('')
@@ -73,6 +78,34 @@ export default function Menu() {
   useEffect(() => {
     fetchMenuData()
   }, [])
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return
+
+    setCreatingCategory(true)
+    try {
+      const res = await api.post('/categories', { name: newCategoryName.trim() })
+      const newCat = res.data.data
+      
+      setCategories(prev => [...prev, newCat])
+      setSelectedCategoryId(newCat._id)
+      setNewCategoryName('')
+      setShowNewCategoryForm(false)
+      
+      toast({
+        title: "Category Created",
+        description: `Category "${newCat.name}" has been created and selected.`
+      })
+    } catch (error: any) {
+      toast({
+        title: "Failed to create category",
+        description: error.response?.data?.message || "Something went wrong.",
+        variant: "destructive"
+      })
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
 
   const filteredMenu = dishes.filter(dish => {
     const matchesCategory = activeCategory === 'All' || dish.categoryId?.name === activeCategory || dish.categoryId?._id === activeCategory
@@ -230,18 +263,47 @@ export default function Menu() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <select 
-                    id="category" 
-                    value={selectedCategoryId}
-                    onChange={(e) => setSelectedCategoryId(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Select category...</option>
-                    {categories.filter(c => c._id !== 'All').map(c => (
-                      <option key={c._id} value={c._id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="category">Category *</Label>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowNewCategoryForm(!showNewCategoryForm)}
+                      className="text-xs text-primary hover:underline font-semibold"
+                    >
+                      {showNewCategoryForm ? "Cancel" : "+ New"}
+                    </button>
+                  </div>
+                  {showNewCategoryForm ? (
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="New category name..." 
+                        value={newCategoryName}
+                        onChange={(e: any) => setNewCategoryName(e.target.value)}
+                        className="h-10 text-sm"
+                      />
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        onClick={handleCreateCategory}
+                        disabled={creatingCategory}
+                        className="h-10 text-xs px-3"
+                      >
+                        {creatingCategory ? "..." : "Create"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <select 
+                      id="category" 
+                      value={selectedCategoryId}
+                      onChange={(e) => setSelectedCategoryId(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Select category...</option>
+                      {categories.filter(c => c._id !== 'All').map(c => (
+                        <option key={c._id} value={c._id}>{c.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="price">Selling Price (₹) *</Label>
