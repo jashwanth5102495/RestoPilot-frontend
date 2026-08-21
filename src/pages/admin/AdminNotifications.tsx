@@ -23,7 +23,7 @@ export default function AdminNotifications() {
         const res = await api.get('/admin/whatsapp/status')
         const data = res.data.data
         setStatus(data.status)
-        if (data.status === 'INITIALIZING' && data.qrCodeUrl) {
+        if (data.status === 'AWAITING_LOGIN' && data.qrCodeUrl) {
           setQrCode(data.qrCodeUrl)
         }
       } catch (error) {
@@ -72,14 +72,14 @@ export default function AdminNotifications() {
             <CardDescription>Scan the QR code with WhatsApp.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            {(status === 'LOADING' || status === 'DISCONNECTED') && !qrCode && (
+            {(status === 'LOADING' || status === 'DISCONNECTED' || status === 'INITIALIZING') && !qrCode && (
               <div className="flex flex-col items-center text-gray-500">
                 <Loader2 className="w-10 h-10 mb-4 animate-spin" />
                 <p>Initializing WhatsApp Service...</p>
               </div>
             )}
 
-            {status === 'INITIALIZING' && (
+            {status === 'AWAITING_LOGIN' && (
               <div className="flex flex-col items-center">
                 {qrCode ? (
                   <div className="p-4 bg-white border rounded-xl shadow-sm mb-4">
@@ -146,15 +146,15 @@ export default function AdminNotifications() {
 
                 <Button 
                   type="submit" 
-                  disabled={isRequesting || (status !== 'INITIALIZING' && status !== 'DISCONNECTED')}
+                  disabled={isRequesting || status !== 'AWAITING_LOGIN'}
                   className="w-full"
                 >
                   {isRequesting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Get Pairing Code
                 </Button>
                 
-                {status !== 'INITIALIZING' && status !== 'DISCONNECTED' && (
-                  <p className="text-xs text-amber-500 text-center">Service is not ready for pairing.</p>
+                {status !== 'AWAITING_LOGIN' && (
+                  <p className="text-xs text-amber-500 text-center">Please wait for WhatsApp to fully initialize first...</p>
                 )}
               </form>
             )}
