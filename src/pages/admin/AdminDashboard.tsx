@@ -1,25 +1,50 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Building2, UtensilsCrossed, TrendingUp, PackageSearch } from 'lucide-react'
+import { Building2, UtensilsCrossed, TrendingUp, PackageSearch, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
 
 export default function AdminDashboard() {
   const [restaurants, setRestaurants] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  const fetchRestaurants = async () => {
+    try {
+      const res = await api.get('/admin/restaurants')
+      setRestaurants(res.data.data)
+    } catch (error) {
+      console.error("Error fetching restaurants", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchRestaurants = async () => {
-      try {
-        const res = await api.get('/admin/restaurants')
-        setRestaurants(res.data.data)
-      } catch (error) {
-        console.error("Error fetching restaurants", error)
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchRestaurants()
   }, [])
+
+  const handleDeleteRestaurant = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete the restaurant "${name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await api.delete(`/admin/restaurants/${id}`)
+      toast({
+        title: "Restaurant Deleted",
+        description: `Successfully deleted ${name} and all its data.`,
+      })
+      fetchRestaurants()
+    } catch (error: any) {
+      toast({
+        title: "Failed to Delete",
+        description: error.response?.data?.message || "An error occurred while deleting the restaurant.",
+        variant: "destructive"
+      })
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -60,6 +85,7 @@ export default function AdminDashboard() {
                     <th className="px-4 py-3 font-semibold text-center">Total Sales</th>
                     <th className="px-4 py-3 font-semibold text-center">Inventory Items</th>
                     <th className="px-4 py-3 font-semibold text-center">Status</th>
+                    <th className="px-4 py-3 font-semibold text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -95,6 +121,16 @@ export default function AdminDashboard() {
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${r.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {r.status}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteRestaurant(r._id, r.name)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </td>
                     </tr>
                   ))}
