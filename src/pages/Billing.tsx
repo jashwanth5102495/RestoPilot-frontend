@@ -145,20 +145,50 @@ export default function Billing() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredDishes.map(dish => (
-                <Card 
-                  key={dish._id} 
-                  className={`cursor-pointer hover:border-primary/50 transition-colors group overflow-hidden ${!dish.isAvailable ? 'opacity-50 grayscale' : ''}`}
-                  onClick={() => addToCart(dish)}
-                >
-
-                  <CardContent className="p-3">
-                    <p className="text-xs text-primary font-medium mb-1">{dish.categoryId?.name}</p>
-                    <h3 className="font-semibold text-gray-900 leading-tight mb-1">{dish.name}</h3>
-                    <p className="font-bold text-gray-900">₹{dish.price}</p>
-                  </CardContent>
-                </Card>
-              ))}
+              {filteredDishes.map(dish => {
+                const cartItem = cart.find(item => item.dish._id === dish._id);
+                const quantity = cartItem ? cartItem.quantity : 0;
+                return (
+                  <Card 
+                    key={dish._id} 
+                    className={`hover:border-primary/50 transition-colors group overflow-hidden flex flex-col justify-between ${!dish.isAvailable ? 'opacity-50 grayscale' : ''}`}
+                  >
+                    <CardContent className="p-3 flex-1">
+                      <p className="text-xs text-primary font-medium mb-1">{dish.categoryId?.name}</p>
+                      <h3 className="font-semibold text-gray-900 leading-tight mb-1">{dish.name}</h3>
+                      <p className="font-bold text-gray-900">₹{dish.price}</p>
+                    </CardContent>
+                    <div className="p-3 pt-0">
+                      {quantity === 0 ? (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full text-xs font-semibold h-8 border-primary text-primary hover:bg-primary hover:text-white"
+                          onClick={() => addToCart(dish)}
+                        >
+                          Add
+                        </Button>
+                      ) : (
+                        <div className="flex items-center justify-between w-full bg-gray-100 rounded-md h-8 px-1">
+                          <button 
+                            onClick={() => updateQuantity(dish._id, -1)} 
+                            className="p-1 hover:bg-gray-200 rounded text-gray-600 transition-colors"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="text-xs font-medium">{quantity}</span>
+                          <button 
+                            onClick={() => updateQuantity(dish._id, 1)} 
+                            className="p-1 hover:bg-gray-200 rounded text-gray-600 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           )}
           {!loading && filteredDishes.length === 0 && (

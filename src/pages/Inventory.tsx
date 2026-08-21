@@ -22,24 +22,40 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Search, Plus, Package, AlertTriangle, IndianRupee, Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Inventory() {
+  const { toast } = useToast()
   const [search, setSearch] = useState('')
   const [ingredients, setIngredients] = useState<any[]>([])
+  const [suppliers, setSuppliers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Quick purchase form states
+  const [selectedIngredientId, setSelectedIngredientId] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [totalPrice, setTotalPrice] = useState('')
+  const [selectedSupplierId, setSelectedSupplierId] = useState('')
+
+  const fetchInventoryAndSuppliers = async () => {
+    try {
+      const [ingRes, supRes] = await Promise.all([
+        api.get('/ingredients'),
+        api.get('/suppliers')
+      ])
+      setIngredients(ingRes.data.data || [])
+      setSuppliers(supRes.data.data || [])
+    } catch (error) {
+      console.error('Error fetching inventory details:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchIngredients = async () => {
-      try {
-        const response = await api.get('/ingredients')
-        setIngredients(response.data.data)
-      } catch (error) {
-        console.error('Error fetching inventory:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchIngredients()
+    fetchInventoryAndSuppliers()
   }, [])
 
   const filteredInventory = ingredients.filter(item => 
@@ -52,6 +68,67 @@ export default function Inventory() {
     return 'Healthy'
   }
 
+  // Calculated dynamic statistics
+  const totalIngredients = ingredients.length
+  const lowStockCount = ingredients.filter(i => i.currentStock > 0 && i.currentStock <= i.minimumStock).length
+  const outOfStockCount = ingredients.filter(i => i.currentStock <= 0).length
+  const totalStockValue = ingredients.reduce((sum, i) => sum + (Math.max(0, i.currentStock) * (i.averageCost || 0)), 0)
+
+  const selectedIngredient = ingredients.find(i => i._id === selectedIngredientId)
+  const currentStockText = selectedIngredient ? `${selectedIngredient.currentStock} ${selectedIngredient.unit}` : '--'
+  const afterStockText = selectedIngredient && quantity ? `${selectedIngredient.currentStock + Number(quantity)} ${selectedIngredient.unit}` : '--'
+
+  const handleAddStock = async () => {
+    if (!selectedIngredientId || !quantity || !totalPrice || !selectedSupplierId) {
+      toast({
+        title: "Incomplete Fields",
+        description: "Please fill out all the fields to record the purchase.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const ing = ingredients.find(i => i._id === selectedIngredientId)
+      await api.post('/purchases', {
+        supplierId: selectedSupplierId,
+        paymentStatus: 'PAID',
+        purchaseDate: new Date(),
+        notes: `Inventory quick adjustment receipt`,
+        items: [{
+          ingredientId: selectedIngredientId,
+          quantity: Number(quantity),
+          unitCost: Number(totalPrice) / Number(quantity),
+          unit: ing?.unit || 'pcs'
+        }]
+      })
+
+      toast({
+        title: "Stock Added Successfully",
+        description: `Successfully added ${quantity} ${ing?.unit || ''} to ${ing?.name || 'ingredient'}.`
+      })
+
+      // Reset form states
+      setSelectedIngredientId('')
+      setQuantity('')
+      setTotalPrice('')
+      setSelectedSupplierId('')
+      setIsDialogOpen(false)
+
+      // Refresh data
+      fetchInventoryAndSuppliers()
+    } catch (error: any) {
+      toast({
+        title: "Failed to Add Stock",
+        description: error.response?.data?.message || "Verify the details and try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -59,7 +136,7 @@ export default function Inventory() {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Inventory</h1>
           <p className="text-gray-500">Track ingredients, stock levels and movement.</p>
         </div>
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="shadow-sm">
               <Plus className="w-4 h-4 mr-2" /> Add Stock
@@ -75,42 +152,65 @@ export default function Inventory() {
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="ingredient">Ingredient</Label>
-                <select id="ingredient" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
+                <select 
+                  id="ingredient" 
+                  value={selectedIngredientId}
+                  onChange={(e) => setSelectedIngredientId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
                   <option value="">Select ingredient...</option>
-                  {ingredients.map(i => <option key={i._id} value={i._id}>{i.name}</option>)}
+                  {ingredients.map(i => <option key={i._id} value={i._id}>{i.name} ({i.unit})</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="qty">Quantity</Label>
-                  <Input id="qty" type="number" placeholder="0" />
+                  <Input 
+                    id="qty" 
+                    type="number" 
+                    placeholder="0" 
+                    value={quantity}
+                    onChange={(e: any) => setQuantity(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="price">Purchase Price (Total)</Label>
-                  <Input id="price" type="number" placeholder="₹" />
+                  <Label htmlFor="price">Purchase Price (Total ₹)</Label>
+                  <Input 
+                    id="price" 
+                    type="number" 
+                    placeholder="₹" 
+                    value={totalPrice}
+                    onChange={(e: any) => setTotalPrice(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="supplier">Supplier</Label>
-                <select id="supplier" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
+                <select 
+                  id="supplier" 
+                  value={selectedSupplierId}
+                  onChange={(e) => setSelectedSupplierId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
                   <option value="">Select supplier...</option>
-                  <option value="1">ABC Foods</option>
-                  <option value="2">Fresh Farms</option>
+                  {suppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
                 </select>
               </div>
               
               <div className="mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
                 <p className="text-sm font-medium text-gray-700 flex justify-between">
-                  <span>Current Stock:</span> <span>--</span>
+                  <span>Current Stock:</span> <span>{currentStockText}</span>
                 </p>
                 <p className="text-sm font-medium text-green-600 flex justify-between mt-1">
-                  <span>After Purchase:</span> <span>--</span>
+                  <span>After Purchase:</span> <span>{afterStockText}</span>
                 </p>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline">Cancel</Button>
-              <Button>Add Stock</Button>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddStock} disabled={submitting}>
+                {submitting ? 'Adding...' : 'Add Stock'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -125,7 +225,7 @@ export default function Inventory() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500">Total Ingredients</p>
-            <h3 className="text-2xl font-bold text-gray-900 mt-1">128</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mt-1">{loading ? '--' : totalIngredients}</h3>
           </CardContent>
         </Card>
         <Card>
@@ -136,7 +236,7 @@ export default function Inventory() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500">Low Stock</p>
-            <h3 className="text-2xl font-bold text-gray-900 mt-1">8</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mt-1">{loading ? '--' : lowStockCount}</h3>
           </CardContent>
         </Card>
         <Card>
@@ -147,7 +247,7 @@ export default function Inventory() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500">Out of Stock</p>
-            <h3 className="text-2xl font-bold text-gray-900 mt-1">2</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mt-1">{loading ? '--' : outOfStockCount}</h3>
           </CardContent>
         </Card>
         <Card>
@@ -158,7 +258,9 @@ export default function Inventory() {
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500">Stock Value</p>
-            <h3 className="text-2xl font-bold text-gray-900 mt-1">₹2,84,500</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mt-1">
+              {loading ? '--' : `₹${Math.round(totalStockValue).toLocaleString()}`}
+            </h3>
           </CardContent>
         </Card>
       </div>
