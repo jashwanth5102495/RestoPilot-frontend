@@ -15,7 +15,7 @@ export default function AdminNotifications() {
         const res = await api.get('/admin/whatsapp/status')
         const data = res.data.data
         setStatus(data.status)
-        if (data.status === 'UNAUTHENTICATED' && data.qrCodeUrl) {
+        if (data.status === 'INITIALIZING' && data.qrCodeUrl) {
           setQrCode(data.qrCodeUrl)
         }
       } catch (error) {
@@ -45,14 +45,14 @@ export default function AdminNotifications() {
           <CardDescription>Scan the QR code with WhatsApp to connect the backend service.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-12">
-          {status === 'LOADING' && (
+          {(status === 'LOADING' || status === 'DISCONNECTED') && !qrCode && (
             <div className="flex flex-col items-center text-gray-500">
               <Loader2 className="w-10 h-10 mb-4 animate-spin" />
-              <p>Checking status...</p>
+              <p>Initializing WhatsApp Service...</p>
             </div>
           )}
 
-          {status === 'UNAUTHENTICATED' && (
+          {status === 'INITIALIZING' && (
             <div className="flex flex-col items-center">
               {qrCode ? (
                 <div className="p-4 bg-white border rounded-xl shadow-sm mb-4">
@@ -70,7 +70,7 @@ export default function AdminNotifications() {
             </div>
           )}
 
-          {(status === 'READY' || status === 'AUTHENTICATED') && (
+          {status === 'CONNECTED' && (
             <div className="flex flex-col items-center text-green-600">
               <CheckCircle2 className="w-16 h-16 mb-4" />
               <h3 className="text-xl font-semibold mb-2">System WhatsApp Linked Successfully</h3>
