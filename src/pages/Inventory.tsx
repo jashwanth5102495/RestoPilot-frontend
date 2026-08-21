@@ -37,7 +37,6 @@ export default function Inventory() {
   const [ingredientNameInput, setIngredientNameInput] = useState('')
   const [unitInput, setUnitInput] = useState('g')
   const [quantity, setQuantity] = useState('')
-  const [totalPrice, setTotalPrice] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
 
   const fetchInventoryAndSuppliers = async () => {
@@ -80,7 +79,7 @@ export default function Inventory() {
   const afterStockText = selectedIngredient && quantity ? `${selectedIngredient.currentStock + Number(quantity)} ${selectedIngredient.unit}` : (quantity ? `${quantity} units` : '--')
 
   const handleAddStock = async () => {
-    if (!ingredientNameInput || !quantity || !totalPrice) {
+    if (!ingredientNameInput || !quantity) {
       toast({
         title: "Incomplete Fields",
         description: "Please fill out all the fields to record the purchase.",
@@ -113,7 +112,7 @@ export default function Inventory() {
         items: [{
           ingredientId: ingId,
           quantity: Number(quantity),
-          unitCost: Number(totalPrice) / Number(quantity),
+          unitCost: 0,
           unit: ingUnit
         }]
       })
@@ -126,7 +125,6 @@ export default function Inventory() {
       // Reset form states
       setIngredientNameInput('')
       setQuantity('')
-      setTotalPrice('')
       setSelectedSupplierId('')
       setIsDialogOpen(false)
 
@@ -214,7 +212,7 @@ export default function Inventory() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="qty">Quantity</Label>
                   <Input 
@@ -223,16 +221,6 @@ export default function Inventory() {
                     placeholder="0" 
                     value={quantity}
                     onChange={(e: any) => setQuantity(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">Purchase Price (Total ₹)</Label>
-                  <Input 
-                    id="price" 
-                    type="number" 
-                    placeholder="₹" 
-                    value={totalPrice}
-                    onChange={(e: any) => setTotalPrice(e.target.value)}
                   />
                 </div>
               </div>

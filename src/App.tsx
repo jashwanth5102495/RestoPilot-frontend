@@ -9,6 +9,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminDataBackup from './pages/admin/AdminDataBackup'
 import AdminDataRequests from './pages/admin/AdminDataRequests'
 import AdminAgents from './pages/admin/AdminAgents'
+import AdminNotifications from './pages/admin/AdminNotifications'
 import AdminLogin from './pages/admin/AdminLogin'
 import { Toaster } from './components/ui/toaster'
 
@@ -26,6 +27,7 @@ import Branches from './pages/Branches'
 import Recipes from './pages/Recipes'
 import Subscription from './pages/Subscription'
 import DataArchive from './pages/DataArchive'
+import Notifications from './pages/Notifications'
 
 function App() {
   return (
@@ -41,6 +43,7 @@ function App() {
           <Route path="backup" element={<AdminDataBackup />} />
           <Route path="requests" element={<AdminDataRequests />} />
           <Route path="agents" element={<AdminAgents />} />
+          <Route path="notifications" element={<AdminNotifications />} />
         </Route>
         
         <Route path="/order/:slug" element={<CustomerOrder />} />
@@ -61,6 +64,7 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/subscription" element={<Subscription />} />
           <Route path="/archive" element={<DataArchive />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
       </Routes>
       <Toaster />

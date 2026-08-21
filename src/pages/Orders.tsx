@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
 import { Search, MoreVertical, Printer, Download, Eye, Calendar, Banknote, Smartphone, CreditCard } from "lucide-react"
+import { printReceipt } from '@/lib/printReceipt'
 
 export default function Orders() {
   const [orders, setOrders] = useState<any[]>([])
@@ -63,6 +64,10 @@ export default function Orders() {
     if (status === 'COMPLETED') return 'Completed'
     if (status === 'CANCELLED') return 'Cancelled'
     return 'Pending'
+  }
+
+  const handlePrint = (order: any) => {
+    printReceipt(order)
   }
 
   return (
@@ -161,7 +166,7 @@ export default function Orders() {
                           <DropdownMenuItem className="cursor-pointer text-gray-700 flex items-center">
                             <Eye className="w-4 h-4 mr-2" /> View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-gray-700 flex items-center">
+                          <DropdownMenuItem className="cursor-pointer text-gray-700 flex items-center" onClick={() => handlePrint(order)}>
                             <Printer className="w-4 h-4 mr-2" /> Print Bill
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer text-gray-700 flex items-center">

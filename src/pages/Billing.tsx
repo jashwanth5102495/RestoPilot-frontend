@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { printReceipt } from '@/lib/printReceipt'
 
 type CartItem = {
   dish: any
@@ -22,6 +23,10 @@ export default function Billing() {
   const [searchQuery, setSearchQuery] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'CARD'>('CASH')
+
+  // Customer states
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,10 +90,15 @@ export default function Billing() {
         quantity: item.quantity
       }))
 
-      const response = await api.post('/billing/sale', {
+      const payload: any = {
         items,
-        paymentMethod
-      })
+        paymentMethod,
+        customerInfo: {}
+      }
+      if (customerName) payload.customerInfo.name = customerName;
+      if (customerPhone) payload.customerInfo.phone = customerPhone;
+
+      const response = await api.post('/billing/sale', payload)
 
       const billNumber = response.data.data.bill.billNumber
       toast({
@@ -96,7 +106,12 @@ export default function Billing() {
         description: `Order ${billNumber} completed via ${paymentMethod}.`,
       })
       
+      // Print the receipt
+      printReceipt(response.data.data.order)
+
       setCart([])
+      setCustomerName('')
+      setCustomerPhone('')
     } catch (error: any) {
       toast({
         title: "Billing Failed",
@@ -205,6 +220,21 @@ export default function Billing() {
         <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
           <h2 className="text-lg font-bold text-gray-900">Current Order</h2>
           <p className="text-sm text-gray-500">Order #RP{Math.floor(1000 + Math.random() * 9000)}</p>
+        </div>
+
+        <div className="p-4 border-b border-gray-200 space-y-3">
+          <Input 
+            placeholder="Customer Name (Optional)" 
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className="h-9"
+          />
+          <Input 
+            placeholder="Contact Number (Optional)" 
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+            className="h-9"
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">

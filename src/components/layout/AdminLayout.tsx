@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, NavLink, Navigate } from 'react-router-dom'
-import { Store, LogOut, ShieldAlert, Database, FileText, Users } from 'lucide-react'
+import { Store, LogOut, ShieldAlert, Database, FileText, Users, MessageSquare } from 'lucide-react'
 
 export default function AdminLayout() {
   const navigate = useNavigate()
@@ -38,6 +38,10 @@ export default function AdminLayout() {
           <NavLink to="/admin/agents" className={({isActive}) => `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${isActive ? 'bg-slate-800/50 text-orange-400' : 'text-slate-400 hover:text-white hover:bg-slate-800/30'}`}>
             <Users className="w-5 h-5" />
             Manage Agents
+          </NavLink>
+          <NavLink to="/admin/notifications" className={({isActive}) => `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${isActive ? 'bg-slate-800/50 text-orange-400' : 'text-slate-400 hover:text-white hover:bg-slate-800/30'}`}>
+            <MessageSquare className="w-5 h-5" />
+            WhatsApp Setup
           </NavLink>
         </div>
         

@@ -15,7 +15,8 @@ import {
   Globe,
   CreditCard,
   Database,
-  GitBranch
+  GitBranch,
+  Bell
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +34,7 @@ const managementNav = [
   { name: 'Purchases', to: '/purchases', icon: Truck },
   { name: 'Suppliers', to: '/suppliers', icon: Users },
   { name: 'Branches', to: '/branches', icon: GitBranch },
+  { name: 'Notifications', to: '/notifications', icon: Bell },
 ]
 
 const analyticsNav = [
