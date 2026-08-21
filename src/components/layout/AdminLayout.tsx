@@ -4,13 +4,15 @@ import { Store, LogOut, ShieldAlert, Database, FileText, Users, MessageSquare } 
 export default function AdminLayout() {
   const navigate = useNavigate()
   const isAdminAuth = sessionStorage.getItem('adminAuth') === 'true'
+  const userStr = localStorage.getItem('user')
+  const isSuperAdmin = userStr ? JSON.parse(userStr).role === 'SUPER_ADMIN' : false
 
   const handleLogout = () => {
     sessionStorage.removeItem('adminAuth')
     navigate('/admin/login')
   }
 
-  if (!isAdminAuth) {
+  if (!isAdminAuth || !isSuperAdmin) {
     return <Navigate to="/admin/login" replace />
   }
 
