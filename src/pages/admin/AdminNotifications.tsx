@@ -146,15 +146,15 @@ export default function AdminNotifications() {
 
                 <Button 
                   type="submit" 
-                  disabled={isRequesting || status !== 'AWAITING_LOGIN'}
+                  disabled={isRequesting || (status !== 'AWAITING_LOGIN' && status !== 'INITIALIZING')}
                   className="w-full"
                 >
                   {isRequesting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Get Pairing Code
                 </Button>
                 
-                {status !== 'AWAITING_LOGIN' && (
-                  <p className="text-xs text-amber-500 text-center">Please wait for WhatsApp to fully initialize first...</p>
+                {status !== 'AWAITING_LOGIN' && status !== 'INITIALIZING' && (
+                  <p className="text-xs text-amber-500 text-center">Service disconnected. Cannot pair.</p>
                 )}
               </form>
             )}
