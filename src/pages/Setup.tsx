@@ -268,8 +268,8 @@ export default function Setup() {
 
             </CardContent>
             <CardFooter className="flex justify-between border-t p-6">
-              <Button variant="ghost" onClick={() => navigate('/dashboard')}>Skip Setup</Button>
-              <Button onClick={() => setStep(2)} disabled={ingredients.length === 0} className="bg-primary hover:bg-primary/90">
+              <Button variant="ghost" onClick={() => setStep(2)}>Skip Step</Button>
+              <Button onClick={() => setStep(2)} className="bg-primary hover:bg-primary/90">
                 Next Step <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardFooter>
@@ -428,9 +428,14 @@ export default function Setup() {
               <Button variant="outline" onClick={() => setStep(1)}>
                 <ArrowLeft className="w-4 h-4 mr-2" /> Back
               </Button>
-              <Button onClick={handleCompleteSetup} disabled={dishes.length === 0 || isSubmitting} className="bg-green-600 hover:bg-green-700">
-                {isSubmitting ? 'Saving...' : 'Complete Setup'} <CheckCircle2 className="w-4 h-4 ml-2" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+                  Skip Setup
+                </Button>
+                <Button onClick={handleCompleteSetup} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
+                  {isSubmitting ? 'Saving...' : 'Complete Setup'} <CheckCircle2 className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         )}

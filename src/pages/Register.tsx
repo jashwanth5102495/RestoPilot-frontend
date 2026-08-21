@@ -55,9 +55,7 @@ export default function Register() {
         navigate('/setup')
       }
     } catch (err: any) {
-      // For demonstration, always navigate to setup if the API doesn't exist yet
-      navigate('/setup')
-      // setError(err.response?.data?.message || 'Failed to register. Please try again later.')
+      setError(err.response?.data?.message || 'Failed to register. Please try again later.')
     } finally {
       setLoading(false)
     }
