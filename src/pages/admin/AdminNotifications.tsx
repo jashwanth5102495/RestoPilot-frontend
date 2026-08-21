@@ -15,8 +15,8 @@ export default function AdminNotifications() {
         const res = await api.get('/admin/whatsapp/status')
         const data = res.data.data
         setStatus(data.status)
-        if (data.status === 'UNAUTHENTICATED' && data.qrCode) {
-          setQrCode(data.qrCode)
+        if (data.status === 'UNAUTHENTICATED' && data.qrCodeUrl) {
+          setQrCode(data.qrCodeUrl)
         }
       } catch (error) {
         console.error('Failed to fetch whatsapp status', error)
