@@ -55,7 +55,14 @@ export default function Register() {
         navigate('/setup')
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to register. Please try again later.')
+      const responseData = err.response?.data;
+      if (responseData?.error?.details && Array.isArray(responseData.error.details)) {
+        // Zod validation error array
+        const errorMessages = responseData.error.details.map((d: any) => d.message).join(', ');
+        setError(`Validation failed: ${errorMessages}`);
+      } else {
+        setError(responseData?.message || 'Failed to register. Please try again later.');
+      }
     } finally {
       setLoading(false)
     }
