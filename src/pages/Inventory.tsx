@@ -54,8 +54,18 @@ export default function Inventory() {
     }
   }
 
+  const fetchCheckStatus = async () => {
+    try {
+      const res = await api.get('/inventory/checks/status')
+      setCheckSummary(res.data.data)
+    } catch (err) {
+      console.error('Failed to fetch check status', err)
+    }
+  }
+
   useEffect(() => {
     fetchInventoryAndSuppliers()
+    fetchCheckStatus()
   }, [])
 
   const filteredInventory = ingredients.filter(item => 
@@ -243,6 +253,46 @@ export default function Inventory() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {checkSummary && !checkSummary.snoozedUntil && (checkSummary.summary.due > 0 || checkSummary.summary.overdue > 0) && (
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="p-2 bg-orange-100 rounded-full text-orange-600">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-orange-900">Inventory Verification Required</h3>
+                <p className="text-sm text-orange-800 mt-1">
+                  {checkSummary.summary.overdue > 0 
+                    ? `${checkSummary.summary.overdue} ingredients are overdue for physical verification.` 
+                    : `${checkSummary.summary.due} ingredients are due for physical verification.`}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto bg-white border-orange-200 text-orange-700 hover:bg-orange-50"
+                onClick={async () => {
+                  try {
+                    await api.patch('/inventory/checks/snooze', { snoozeHours: 24 });
+                    fetchCheckStatus();
+                  } catch (e) {}
+                }}
+              >
+                Remind Me Later
+              </Button>
+              <Button 
+                className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={() => window.location.href = '/inventory/check'}
+              >
+                Review Inventory
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>

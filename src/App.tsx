@@ -19,6 +19,8 @@ import OnlineOrders from './pages/OnlineOrders'
 import CustomerOrder from './pages/CustomerOrder'
 import Menu from './pages/Menu'
 import Inventory from './pages/Inventory'
+import InventoryCheck from './pages/InventoryCheck'
+import InventoryCheckHistory from './pages/InventoryCheckHistory'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Purchases from './pages/Purchases'
@@ -57,6 +59,8 @@ function App() {
           <Route path="/menu" element={<Menu />} />
           <Route path="/recipes" element={<Recipes />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory/check" element={<InventoryCheck />} />
+          <Route path="/inventory/history" element={<InventoryCheckHistory />} />
           <Route path="/purchases" element={<Purchases />} />
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/branches" element={<Branches />} />
