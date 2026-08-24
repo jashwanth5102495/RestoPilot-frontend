@@ -158,7 +158,7 @@ export default function OnlineOrders() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">${order.total?.toFixed(2)}</p>
+                      <p className="text-lg font-bold text-gray-900">₹{order.total?.toFixed(2)}</p>
                       <p className="text-sm font-medium text-gray-500">{order.paymentStatus}</p>
                     </div>
                   </div>
@@ -179,7 +179,7 @@ export default function OnlineOrders() {
                           <span className="font-medium mr-2">{item.quantity}x</span>
                           {item.dishName}
                         </span>
-                        <span className="text-gray-600">${item.lineTotal?.toFixed(2)}</span>
+                        <span className="text-gray-600">₹{item.lineTotal?.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
