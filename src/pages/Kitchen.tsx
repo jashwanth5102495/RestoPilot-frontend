@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
-import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { useToast } from '../components/ui/use-toast';
-import { API_URL } from '../config';
+import { useToast } from '../hooks/use-toast';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 const Kitchen = () => {
   const { toast } = useToast();
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
   const [orders, setOrders] = useState<any[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
 

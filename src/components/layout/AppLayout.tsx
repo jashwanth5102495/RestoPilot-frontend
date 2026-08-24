@@ -1,15 +1,17 @@
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import SubscriptionOverlay from './SubscriptionOverlay'
 import GlobalOrderListener from './GlobalOrderListener'
 
 export default function AppLayout() {
-  const { user, isAuthenticated } = useAuth()
   const location = useLocation()
+  
+  const token = localStorage.getItem('accessToken')
+  const userStr = localStorage.getItem('user')
+  const user = userStr ? JSON.parse(userStr) : null
 
-  if (!isAuthenticated || !user) {
+  if (!token || !user) {
     return <Navigate to="/login" replace />
   }
 
