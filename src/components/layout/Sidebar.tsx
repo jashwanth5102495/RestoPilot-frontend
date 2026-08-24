@@ -47,6 +47,12 @@ const systemNav = [
   { name: 'Data Archive', to: '/archive', icon: Database },
 ]
 
+const staffNav = [
+  { name: 'Waiter POS', to: '/waiter', icon: Utensils },
+  { name: 'Kitchen Display', to: '/kitchen', icon: ChefHat },
+  { name: 'Staff Login Portal', to: '/waiter/login', icon: LogOut },
+]
+
 export default function Sidebar() {
   const navigate = useNavigate()
   
@@ -151,6 +157,30 @@ export default function Sidebar() {
               <NavLink
                 key={item.name}
                 to={item.to}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                    isActive 
+                      ? "bg-orange-50 text-primary" 
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  )
+                }
+              >
+                <item.icon className="w-5 h-5" />
+                {item.name}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+
+        <div>
+          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Staff Portals</h3>
+          <nav className="space-y-1">
+            {staffNav.map((item) => (
+              <NavLink
+                key={item.name}
+                to={item.to}
+                target={item.to === '/waiter/login' ? "_blank" : undefined}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
