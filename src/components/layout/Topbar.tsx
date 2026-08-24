@@ -1,9 +1,12 @@
 import { Bell, Search, Menu } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 
 export default function Topbar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const [hasNewOrder, setHasNewOrder] = useState(false)
   
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const restaurantName = user?.restaurant?.name || 'Restaurant'
@@ -11,6 +14,17 @@ export default function Topbar() {
   // Format the path into a readable title
   const path = location.pathname.split('/')[1] || 'Dashboard'
   const title = path.charAt(0).toUpperCase() + path.slice(1)
+
+  useEffect(() => {
+    const handleNewOrder = () => {
+      setHasNewOrder(true)
+      // Stop animation after 10 seconds if not clicked
+      setTimeout(() => setHasNewOrder(false), 10000)
+    }
+
+    window.addEventListener('new-online-order', handleNewOrder)
+    return () => window.removeEventListener('new-online-order', handleNewOrder)
+  }, [])
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-8 shrink-0">
@@ -30,9 +44,17 @@ export default function Topbar() {
           />
         </div>
 
-        <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
+        <button 
+          onClick={() => {
+            setHasNewOrder(false)
+            navigate('/online-orders')
+          }}
+          className={`relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors ${hasNewOrder ? 'animate-bounce text-orange-500 bg-orange-50' : ''}`}
+        >
           <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-2 w-2 h-2 bg-primary rounded-full border-2 border-white"></span>
+          {hasNewOrder && (
+            <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+          )}
         </button>
         
         <div className="hidden md:flex items-center gap-2 ml-2 pl-4 border-l border-gray-200">
