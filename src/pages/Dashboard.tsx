@@ -21,7 +21,6 @@ const salesData = [
 
 export default function Dashboard() {
   const { toast } = useToast()
-  const [popularDishes, setPopularDishes] = useState<any[]>([])
   const [inventoryAlerts, setInventoryAlerts] = useState<any[]>([])
   const [timeFilter, setTimeFilter] = useState("today")
   const [branches, setBranches] = useState<any[]>([])
@@ -30,7 +29,9 @@ export default function Dashboard() {
     totalOrders: 0,
     totalSales: 0,
     lowStockItems: 0,
-    recentOrders: []
+    recentOrders: [],
+    popularDishes: [],
+    totalOnlineOrders: 0
   })
 
   const handleDownloadPDF = async () => {
@@ -103,14 +104,6 @@ export default function Dashboard() {
           api.get('/ingredients')
         ])
         
-        // Use real dishes
-        setPopularDishes(dishesRes.data.data.map((dish: any) => ({
-          id: dish._id,
-          name: dish.name,
-          orders: 0, // No real sales data yet
-          revenue: 0
-        })))
-
         // Map real ingredients to low stock alerts if currentStock <= minimumStock
         const alerts = ingredientsRes.data.data
           .filter((ing: any) => ing.currentStock <= (ing.minimumStock || 5))
@@ -141,7 +134,9 @@ export default function Dashboard() {
           totalOrders: 0,
           totalSales: 0,
           lowStockItems: 0,
-          recentOrders: []
+          recentOrders: [],
+          popularDishes: [],
+          totalOnlineOrders: 0
         })
       } catch (err) {
         console.error("Failed to fetch branch stats:", err)
@@ -232,15 +227,15 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Order Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-gray-500" />
+            <CardTitle className="text-sm font-medium">Online Orders</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">
-              ₹{(dashboardStats.totalOrders > 0 ? Math.round(dashboardStats.totalSales / dashboardStats.totalOrders) : 0).toLocaleString()}
+              {dashboardStats.totalOnlineOrders || 0}
             </div>
             <p className="text-xs text-gray-500 font-medium flex items-center mt-1">
-              {dashboardStats.totalOrders > 0 ? "Based on all orders" : "No data"}
+              {dashboardStats.totalOnlineOrders > 0 ? "From public link" : "No online orders"}
             </p>
           </CardContent>
         </Card>
@@ -290,9 +285,9 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Top Selling Dishes</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1">
-            <div className="space-y-6">
-              {popularDishes.length > 0 ? popularDishes.map((dish, i) => (
+          <CardContent className="flex-1 p-0">
+            <div className="h-[300px] overflow-y-auto p-6 pt-0 space-y-4">
+              {dashboardStats.popularDishes && dashboardStats.popularDishes.length > 0 ? dashboardStats.popularDishes.map((dish, i) => (
                 <div key={dish.id} className="flex items-center p-3 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-100 transition-colors">
                   <div className="w-8 text-sm font-bold text-primary">{i + 1}</div>
                   <div className="ml-2 space-y-1 flex-1">

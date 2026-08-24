@@ -32,6 +32,7 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [checkSummary, setCheckSummary] = useState<any>(null)
 
   // Quick purchase form states
   const [ingredientNameInput, setIngredientNameInput] = useState('')

@@ -168,6 +168,12 @@ export default function OnlineOrders() {
                       <p className="text-sm font-medium text-gray-900">Customer Details</p>
                       <p className="text-sm text-gray-700">{order.customerInfo.name} • {order.customerInfo.phone}</p>
                       {order.customerInfo.email && <p className="text-sm text-gray-700">{order.customerInfo.email}</p>}
+                      {order.customerInfo.address && (
+                        <p className="text-sm text-gray-600 mt-1 flex items-start gap-1">
+                          <span className="font-semibold text-gray-700">Address:</span> 
+                          {order.customerInfo.address}
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -184,12 +190,7 @@ export default function OnlineOrders() {
                     ))}
                   </div>
                   
-                  {order.orderStatus === 'PLACED' && (
-                    <div className="mt-4 flex gap-2">
-                      <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">Accept Order</Button>
-                      <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50">Decline</Button>
-                    </div>
-                  )}
+                  {/* orderStatus action buttons removed as requested */}
                 </div>
               ))}
             </div>

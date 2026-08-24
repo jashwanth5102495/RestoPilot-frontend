@@ -12,6 +12,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,8 +21,11 @@ export default function Login() {
     
     try {
       const response = await api.post('/auth/login', { email, password })
-      localStorage.setItem('accessToken', response.data.data.accessToken)
-      localStorage.setItem('user', JSON.stringify(response.data.data.user))
+      
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('accessToken', response.data.data.accessToken)
+      storage.setItem('user', JSON.stringify(response.data.data.user))
+      
       navigate('/dashboard')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to login')
@@ -163,7 +167,13 @@ export default function Login() {
             </div>
 
             <div className="flex items-center gap-2">
-              <input type="checkbox" id="remember" className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary" />
+              <input 
+                type="checkbox" 
+                id="remember" 
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary" 
+              />
               <Label htmlFor="remember" className="font-normal cursor-pointer text-gray-600">Remember me</Label>
             </div>
 
