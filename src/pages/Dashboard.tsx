@@ -9,15 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
 
-const salesData = [
-  { name: 'Mon', total: 0 },
-  { name: 'Tue', total: 0 },
-  { name: 'Wed', total: 0 },
-  { name: 'Thu', total: 0 },
-  { name: 'Fri', total: 0 },
-  { name: 'Sat', total: 0 },
-  { name: 'Sun', total: 0 },
-]
+// Hardcoded salesData removed
 
 export default function Dashboard() {
   const { toast } = useToast()
@@ -31,7 +23,8 @@ export default function Dashboard() {
     lowStockItems: 0,
     recentOrders: [],
     popularDishes: [],
-    totalOnlineOrders: 0
+    totalOnlineOrders: 0,
+    salesData: []
   })
 
   const handleDownloadPDF = async () => {
@@ -136,7 +129,8 @@ export default function Dashboard() {
           lowStockItems: 0,
           recentOrders: [],
           popularDishes: [],
-          totalOnlineOrders: 0
+          totalOnlineOrders: 0,
+          salesData: []
         })
       } catch (err) {
         console.error("Failed to fetch branch stats:", err)
@@ -261,7 +255,7 @@ export default function Dashboard() {
           <CardContent className="pl-0">
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart data={dashboardStats.salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#F97316" stopOpacity={0.3}/>
