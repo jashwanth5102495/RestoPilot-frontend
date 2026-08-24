@@ -23,6 +23,64 @@ export default function Settings() {
   const [taxRate, setTaxRate] = useState("5")
   const [invoicePrefix, setInvoicePrefix] = useState("RP")
 
+  // Staff States
+  const [staffList, setStaffList] = useState<any[]>([])
+  const [staffLoading, setStaffLoading] = useState(false)
+  const [showStaffModal, setShowStaffModal] = useState(false)
+  const [editingStaff, setEditingStaff] = useState<any>(null)
+  const [staffForm, setStaffForm] = useState({ name: '', role: 'WAITER', loginId: '', password: '' })
+
+  const fetchStaff = async () => {
+    setStaffLoading(true)
+    try {
+      const res = await api.get('/staff')
+      setStaffList(res.data.data)
+    } catch (error) {
+      console.error('Failed to fetch staff:', error)
+    } finally {
+      setStaffLoading(false)
+    }
+  }
+
+  const handleSaveStaff = async () => {
+    try {
+      if (editingStaff) {
+        await api.patch(`/staff/${editingStaff._id}`, { name: staffForm.name, role: staffForm.role })
+        toast({ title: 'Staff updated successfully' })
+      } else {
+        await api.post('/staff', staffForm)
+        toast({ title: 'Staff created successfully' })
+      }
+      setShowStaffModal(false)
+      setEditingStaff(null)
+      setStaffForm({ name: '', role: 'WAITER', loginId: '', password: '' })
+      fetchStaff()
+    } catch (err: any) {
+      toast({ title: 'Error saving staff', description: err.response?.data?.message, variant: 'destructive' })
+    }
+  }
+
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      await api.patch(`/staff/${id}`, { status })
+      toast({ title: `Staff status updated to ${status}` })
+      fetchStaff()
+    } catch (err: any) {
+      toast({ title: 'Error updating status', variant: 'destructive' })
+    }
+  }
+
+  const handleResetPin = async (id: string) => {
+    const pin = prompt('Enter new PIN for this staff member:')
+    if (!pin) return
+    try {
+      await api.patch(`/staff/${id}/reset-pin`, { pin })
+      toast({ title: 'PIN reset successfully' })
+    } catch (err: any) {
+      toast({ title: 'Error resetting PIN', variant: 'destructive' })
+    }
+  }
+
   const fetchProfile = async () => {
     try {
       const res = await api.get('/auth/me')
@@ -47,6 +105,7 @@ export default function Settings() {
 
   useEffect(() => {
     fetchProfile()
+    fetchStaff()
   }, [])
 
   const handleSaveProfile = async () => {
@@ -196,18 +255,92 @@ export default function Settings() {
 
           <TabsContent value="users">
             <Card>
-              <CardHeader>
-                <CardTitle>Team Members</CardTitle>
-                <CardDescription>Manage staff access and roles.</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Team Members</CardTitle>
+                  <CardDescription>Manage staff access and roles.</CardDescription>
+                </div>
+                <Button onClick={() => setShowStaffModal(true)}>Add Staff</Button>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  User management will be available in the next update.
-                </div>
+                {staffLoading ? (
+                  <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
+                ) : (
+                  <div className="space-y-4">
+                    {staffList.map((staff: any) => (
+                      <div key={staff._id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <div className="font-medium">{staff.name}</div>
+                          <div className="text-sm text-gray-500">
+                            Role: {staff.role} | Login ID: {staff.loginId || 'N/A'} | Status: {staff.status}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setEditingStaff(staff)
+                            setShowStaffModal(true)
+                          }}>Edit</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleStatusChange(staff._id, staff.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}>
+                            {staff.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleResetPin(staff._id)}>Reset PIN</Button>
+                        </div>
+                      </div>
+                    ))}
+                    {staffList.length === 0 && <div className="text-center text-gray-500 py-4">No staff members found.</div>}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+      )}
+
+      {/* Staff Modal */}
+      {showStaffModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-[400px]">
+            <CardHeader>
+              <CardTitle>{editingStaff ? 'Edit Staff' : 'Add Staff'}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input value={staffForm.name} onChange={e => setStaffForm({...staffForm, name: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <select 
+                  className="w-full border rounded-md p-2" 
+                  value={staffForm.role} 
+                  onChange={e => setStaffForm({...staffForm, role: e.target.value})}
+                >
+                  <option value="WAITER">Waiter</option>
+                  <option value="KITCHEN">Kitchen</option>
+                  <option value="BILLING">Billing</option>
+                  <option value="MANAGER">Manager</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Login ID</Label>
+                <Input disabled={!!editingStaff} value={staffForm.loginId} onChange={e => setStaffForm({...staffForm, loginId: e.target.value})} placeholder="e.g. ravi01" />
+              </div>
+              {!editingStaff && (
+                <div className="space-y-2">
+                  <Label>PIN / Password</Label>
+                  <Input type="password" value={staffForm.password} onChange={e => setStaffForm({...staffForm, password: e.target.value})} />
+                </div>
+              )}
+              <div className="flex gap-2 justify-end mt-4">
+                <Button variant="outline" onClick={() => {
+                  setShowStaffModal(false)
+                  setEditingStaff(null)
+                }}>Cancel</Button>
+                <Button onClick={handleSaveStaff}>Save</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

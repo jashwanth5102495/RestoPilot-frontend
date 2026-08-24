@@ -18,6 +18,8 @@ import Orders from './pages/Orders'
 import OnlineOrders from './pages/OnlineOrders'
 import CustomerOrder from './pages/CustomerOrder'
 import Menu from './pages/Menu'
+import Waiter from './pages/Waiter'
+import Kitchen from './pages/Kitchen'
 import Inventory from './pages/Inventory'
 import InventoryCheck from './pages/InventoryCheck'
 import InventoryCheckHistory from './pages/InventoryCheckHistory'
@@ -31,11 +33,14 @@ import Subscription from './pages/Subscription'
 import DataArchive from './pages/DataArchive'
 import Notifications from './pages/Notifications'
 
+import WaiterLogin from './pages/WaiterLogin'
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/waiter/login" element={<WaiterLogin />} />
         <Route path="/register" element={<Register />} />
         <Route path="/setup" element={<Setup />} />
         
@@ -54,6 +59,8 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/billing" element={<Billing />} />
+          <Route path="/waiter" element={<Waiter />} />
+          <Route path="/kitchen" element={<Kitchen />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/online-orders" element={<OnlineOrders />} />
           <Route path="/menu" element={<Menu />} />
