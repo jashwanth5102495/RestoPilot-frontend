@@ -7,8 +7,8 @@ import GlobalOrderListener from './GlobalOrderListener'
 export default function AppLayout() {
   const location = useLocation()
   
-  const token = localStorage.getItem('accessToken')
-  const userStr = localStorage.getItem('user')
+  const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
+  const userStr = localStorage.getItem('user') || sessionStorage.getItem('user')
   const user = userStr ? JSON.parse(userStr) : null
 
   if (!token || !user) {

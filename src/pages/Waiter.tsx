@@ -8,7 +8,7 @@ import { useToast } from '../hooks/use-toast';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 const Waiter = () => {
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');
   const { toast } = useToast();
   const [tables, setTables] = useState<any[]>([]);
   const [activeTable, setActiveTable] = useState<any | null>(null);

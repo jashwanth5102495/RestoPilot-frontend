@@ -9,7 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 const Kitchen = () => {
   const { toast } = useToast();
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');
   const [orders, setOrders] = useState<any[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
 
