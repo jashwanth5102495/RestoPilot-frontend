@@ -72,10 +72,20 @@ export default function AdminNotifications() {
             <CardDescription>Scan the QR code with WhatsApp.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            {(status === 'LOADING' || status === 'DISCONNECTED' || status === 'INITIALIZING') && !qrCode && (
+            {(status === 'LOADING' || status === 'INITIALIZING') && !qrCode && (
               <div className="flex flex-col items-center text-gray-500">
                 <Loader2 className="w-10 h-10 mb-4 animate-spin" />
                 <p>Initializing WhatsApp Service...</p>
+              </div>
+            )}
+
+            {status === 'DISCONNECTED' && (
+              <div className="flex flex-col items-center text-red-500">
+                <MessageSquare className="w-10 h-10 mb-4 opacity-50" />
+                <p className="text-center font-medium">WhatsApp Service Offline</p>
+                <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
+                  The backend failed to initialize the WhatsApp client. Ensure the server has Chrome installed.
+                </p>
               </div>
             )}
 
