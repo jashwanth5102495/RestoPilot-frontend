@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
-import { Plus, Minus, ShoppingCart, Loader2, Receipt } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Loader2, Receipt, ArrowLeft } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
@@ -24,6 +24,7 @@ const PublicWaiter = () => {
   const [billLoading, setBillLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -65,6 +66,7 @@ const PublicWaiter = () => {
   const openTable = (table: any) => {
     setCart([]);
     setActiveTable(table);
+    setShowMobileCart(false);
   };
 
   const addToCart = (dish: any) => {
@@ -98,6 +100,7 @@ const PublicWaiter = () => {
       toast({ title: 'Order sent to Kitchen!' });
       setCart([]);
       setActiveTable(null);
+      setShowMobileCart(false);
       fetchTables();
     } catch (err: any) {
       toast({ title: 'Failed to send order', description: err.response?.data?.message, variant: 'destructive' });
@@ -113,6 +116,7 @@ const PublicWaiter = () => {
       await axios.post(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/bill`);
       toast({ title: 'Bill Generated!' });
       setActiveTable(null);
+      setShowMobileCart(false);
       fetchTables();
     } catch (err: any) {
       toast({ title: 'Failed to generate bill', description: err.response?.data?.message, variant: 'destructive' });
@@ -162,12 +166,9 @@ const PublicWaiter = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Table {activeTable.name || activeTable.tableNumber} Order</h2>
             <div className="flex gap-2">
-              <Button onClick={() => {
-                const el = document.getElementById('cart-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }} variant="outline" className="gap-2 bg-white text-gray-700 border-gray-300 lg:hidden">
-                <ShoppingCart className="w-4 h-4" />
-                Current Order ({cart.reduce((a, b) => a + b.quantity, 0)})
+              <Button onClick={() => setShowMobileCart(!showMobileCart)} variant="outline" className="gap-2 bg-white text-gray-700 border-gray-300 lg:hidden">
+                {showMobileCart ? <ArrowLeft className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
+                {showMobileCart ? 'Back to Menu' : `Current Order (${cart.reduce((a, b) => a + b.quantity, 0)})`}
               </Button>
               {activeTable.status === 'OCCUPIED' && (
                 <Button onClick={generateBill} disabled={billLoading} variant="secondary" className="gap-2 bg-orange-100 text-orange-700 hover:bg-orange-200 border-none">
@@ -181,7 +182,7 @@ const PublicWaiter = () => {
           
           <div className="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
             {/* Menu Section */}
-            <div className="flex-1 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className={`flex-1 flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm ${showMobileCart ? 'hidden lg:flex' : 'flex'}`}>
               <div className="p-3 md:p-4 border-b border-gray-100 flex gap-2 overflow-x-auto bg-gray-50/50 scrollbar-hide">
                 {categories.map(cat => (
                   <Button 
@@ -211,7 +212,7 @@ const PublicWaiter = () => {
             </div>
 
             {/* Cart Section */}
-            <div id="cart-section" className="w-full lg:w-96 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm h-[500px] lg:h-auto mt-4 lg:mt-0">
+            <div id="cart-section" className={`w-full lg:w-96 flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm h-[500px] lg:h-auto lg:mt-0 ${showMobileCart ? 'flex mt-4' : 'hidden lg:flex'}`}>
               <div className="p-3 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                 <h3 className="font-bold flex items-center gap-2"><ShoppingCart className="w-5 h-5"/> Current Order</h3>
                 <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">{cart.reduce((a, b) => a + b.quantity, 0)} Items</span>
