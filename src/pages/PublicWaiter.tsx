@@ -163,9 +163,9 @@ const PublicWaiter = () => {
         </div>
       ) : (
         <div className="flex flex-col h-[calc(100vh-100px)]">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Table {activeTable.name || activeTable.tableNumber} Order</h2>
-            <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+            <h2 className="text-xl font-bold">{activeTable.name || `Table ${activeTable.tableNumber}`} Order</h2>
+            <div className="flex flex-wrap gap-2">
               <Button onClick={() => setShowMobileCart(!showMobileCart)} variant="outline" className="gap-2 bg-white text-gray-700 border-gray-300 lg:hidden">
                 {showMobileCart ? <ArrowLeft className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
                 {showMobileCart ? 'Back to Menu' : `Current Order (${cart.reduce((a, b) => a + b.quantity, 0)})`}
