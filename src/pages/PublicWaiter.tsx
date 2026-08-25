@@ -91,7 +91,7 @@ const PublicWaiter = () => {
     try {
       const items = cart.map(item => ({
         dishId: item.dishId,
-        quantity: item.quantity,
+        quantityChange: item.quantity,
         notes: item.notes
       }));
       await axios.post(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/order`, { items });
