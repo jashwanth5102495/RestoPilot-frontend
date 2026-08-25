@@ -16,7 +16,8 @@ import {
   CreditCard,
   Database,
   GitBranch,
-  Bell
+  Bell,
+  LayoutTemplate
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +30,7 @@ const mainNav = [
 
 const managementNav = [
   { name: 'Menu', to: '/menu', icon: MenuSquare },
+  { name: 'Tables', to: '/tables', icon: LayoutTemplate },
   { name: 'Recipes', to: '/recipes', icon: ChefHat },
   { name: 'Inventory', to: '/inventory', icon: Package },
   // { name: 'Purchases', to: '/purchases', icon: Truck },

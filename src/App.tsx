@@ -18,7 +18,9 @@ import Orders from './pages/Orders'
 import OnlineOrders from './pages/OnlineOrders'
 import CustomerOrder from './pages/CustomerOrder'
 import Menu from './pages/Menu'
+import Tables from './pages/Tables'
 import Waiter from './pages/Waiter'
+import PublicWaiter from './pages/PublicWaiter'
 import Kitchen from './pages/Kitchen'
 import Inventory from './pages/Inventory'
 import InventoryCheck from './pages/InventoryCheck'
@@ -54,6 +56,7 @@ function App() {
         </Route>
         
         <Route path="/order/:slug" element={<CustomerOrder />} />
+        <Route path="/waiter-pos/:slug" element={<PublicWaiter />} />
         
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -64,6 +67,7 @@ function App() {
           <Route path="/orders" element={<Orders />} />
           <Route path="/online-orders" element={<OnlineOrders />} />
           <Route path="/menu" element={<Menu />} />
+          <Route path="/tables" element={<Tables />} />
           <Route path="/recipes" element={<Recipes />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/inventory/check" element={<InventoryCheck />} />
