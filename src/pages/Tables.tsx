@@ -25,7 +25,7 @@ export default function Tables() {
 
   const publicUrl = waiterSlug ? `${window.location.origin}/waiter-pos/${waiterSlug}` : ''
 
-  const fetchTables = async () => {
+  const fetchTablesAndOrders = async () => {
     setTableLoading(true)
     try {
       const res = await api.get('/tables')
@@ -62,7 +62,7 @@ export default function Tables() {
   }
 
   useEffect(() => {
-    fetchTables()
+    fetchTablesAndOrders()
     fetchSettings()
   }, [])
 
@@ -70,7 +70,7 @@ export default function Tables() {
     try {
       await api.patch('/tables/count', { count: tableCount })
       toast({ title: 'Table count updated successfully' })
-      fetchTables()
+      fetchTablesAndOrders()
     } catch (err: any) {
       toast({ title: 'Error updating tables', description: err.response?.data?.message, variant: 'destructive' })
     }
@@ -82,7 +82,7 @@ export default function Tables() {
       await api.patch(`/tables/${id}`, { name: editingTableName })
       toast({ title: 'Table renamed successfully' })
       setEditingTable(null)
-      fetchTables()
+      fetchTablesAndOrders()
     } catch (err: any) {
       toast({ title: 'Error renaming table', description: err.response?.data?.message, variant: 'destructive' })
     }
@@ -114,7 +114,7 @@ export default function Tables() {
     try {
       await api.patch(`/orders/${order._id}/status`, { status: 'COMPLETED' });
       toast({ title: 'Bill Generated!' });
-      fetchTables();
+      fetchTablesAndOrders();
     } catch (err: any) {
       toast({ title: 'Error generating bill', description: err.response?.data?.message, variant: 'destructive' })
     }
@@ -176,7 +176,7 @@ export default function Tables() {
               <CardTitle>Table Configuration</CardTitle>
               <CardDescription>Set the number of tables in your restaurant and rename them.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="gap-2" onClick={fetchTables}>
+            <Button variant="outline" size="sm" className="gap-2" onClick={fetchTablesAndOrders}>
               <RefreshCw className="w-4 h-4" />
               Refresh
             </Button>
@@ -204,7 +204,7 @@ export default function Tables() {
               {tables.map((table: any) => {
                 const order = activeOrders.find(o => o.tableId === table._id);
                 return (
-                <div key={table._id} className={`border p-4 rounded-lg flex flex-col space-y-3 relative ${table.status === 'OCCUPIED' ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
+                <div key={table._id} className={`border p-4 rounded-lg flex flex-col space-y-3 relative ${table.status === 'OCCUPIED' ? 'bg-red-50 border-red-500' : 'bg-green-50 border-green-200'}`}>
                   {editingTable === table._id ? (
                     <div className="flex flex-col gap-2 w-full">
                       <Input 
