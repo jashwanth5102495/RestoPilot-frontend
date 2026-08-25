@@ -162,6 +162,13 @@ const PublicWaiter = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Table {activeTable.name || activeTable.tableNumber} Order</h2>
             <div className="flex gap-2">
+              <Button onClick={() => {
+                const el = document.getElementById('cart-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }} variant="outline" className="gap-2 bg-white text-gray-700 border-gray-300 lg:hidden">
+                <ShoppingCart className="w-4 h-4" />
+                Current Order ({cart.reduce((a, b) => a + b.quantity, 0)})
+              </Button>
               {activeTable.status === 'OCCUPIED' && (
                 <Button onClick={generateBill} disabled={billLoading} variant="secondary" className="gap-2 bg-orange-100 text-orange-700 hover:bg-orange-200 border-none">
                   {billLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Receipt className="w-4 h-4" />}
@@ -204,7 +211,7 @@ const PublicWaiter = () => {
             </div>
 
             {/* Cart Section */}
-            <div className="w-full lg:w-96 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm h-64 lg:h-auto">
+            <div id="cart-section" className="w-full lg:w-96 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm h-[500px] lg:h-auto mt-4 lg:mt-0">
               <div className="p-3 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                 <h3 className="font-bold flex items-center gap-2"><ShoppingCart className="w-5 h-5"/> Current Order</h3>
                 <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">{cart.reduce((a, b) => a + b.quantity, 0)} Items</span>

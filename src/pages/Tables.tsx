@@ -12,6 +12,7 @@ export default function Tables() {
   
   // Table States
   const [tables, setTables] = useState<any[]>([])
+  const [activeOrders, setActiveOrders] = useState<any[]>([])
   const [tableCount, setTableCount] = useState<number>(0)
   const [tableLoading, setTableLoading] = useState(true)
   const [editingTable, setEditingTable] = useState<any>(null)
@@ -28,8 +29,16 @@ export default function Tables() {
     setTableLoading(true)
     try {
       const res = await api.get('/tables')
+      const ordersRes = await api.get('/orders')
+      
       setTables(res.data.data)
       setTableCount(res.data.data.length)
+      
+      // Filter out completed and cancelled orders
+      const active = ordersRes.data.data.filter((o: any) => 
+        o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED' && o.tableId
+      )
+      setActiveOrders(active)
     } catch (error) {
       console.error('Failed to fetch tables:', error)
     } finally {
@@ -97,6 +106,18 @@ export default function Tables() {
   const copyLink = () => {
     navigator.clipboard.writeText(publicUrl)
     toast({ title: 'Link copied', description: 'URL copied to clipboard' })
+  }
+
+  const handleGenerateBill = async (tableId: string) => {
+    const order = activeOrders.find(o => o.tableId === tableId);
+    if (!order) return;
+    try {
+      await api.patch(`/orders/${order._id}/status`, { status: 'COMPLETED' });
+      toast({ title: 'Bill Generated!' });
+      fetchTables();
+    } catch (err: any) {
+      toast({ title: 'Error generating bill', description: err.response?.data?.message, variant: 'destructive' })
+    }
   }
 
   return (
@@ -180,8 +201,10 @@ export default function Tables() {
             <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
-              {tables.map((table: any) => (
-                <div key={table._id} className={`border p-4 rounded-lg flex flex-col items-center justify-center space-y-2 relative ${table.status === 'OCCUPIED' ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
+              {tables.map((table: any) => {
+                const order = activeOrders.find(o => o.tableId === table._id);
+                return (
+                <div key={table._id} className={`border p-4 rounded-lg flex flex-col space-y-3 relative ${table.status === 'OCCUPIED' ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
                   {editingTable === table._id ? (
                     <div className="flex flex-col gap-2 w-full">
                       <Input 
@@ -195,17 +218,48 @@ export default function Tables() {
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <span className="text-xl font-bold">{table.name || `Table ${table.tableNumber}`}</span>
-                      <span className="text-xs font-semibold uppercase">{table.status}</span>
-                      <Button variant="ghost" size="sm" className="absolute top-1 right-1 h-6 px-2 text-xs bg-white/50" onClick={() => {
-                        setEditingTable(table._id)
-                        setEditingTableName(table.name || `Table ${table.tableNumber}`)
-                      }}>Edit</Button>
-                    </>
+                    <div className="flex flex-col h-full w-full">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex flex-col">
+                          <span className="text-xl font-bold">{table.name || `Table ${table.tableNumber}`}</span>
+                          <span className="text-xs font-semibold uppercase">{table.status}</span>
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs bg-white/50" onClick={() => {
+                          setEditingTable(table._id)
+                          setEditingTableName(table.name || `Table ${table.tableNumber}`)
+                        }}>Edit</Button>
+                      </div>
+                      
+                      {table.status === 'OCCUPIED' && order && (
+                        <div className="flex flex-col flex-1">
+                          <div className="bg-white/60 p-2 rounded-md mb-3 flex-1">
+                            <p className="text-xs font-bold text-gray-500 mb-1 border-b pb-1">Current Order</p>
+                            <ul className="text-sm space-y-1">
+                              {order.items.map((item: any, i: number) => (
+                                <li key={i} className="flex justify-between">
+                                  <span className="truncate pr-2">{item.quantity}x {item.dishName}</span>
+                                  <span className="font-medium text-primary">₹{item.lineTotal}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="flex justify-between font-bold text-sm mt-2 pt-1 border-t">
+                              <span>Total</span>
+                              <span className="text-primary">₹{order.total}</span>
+                            </div>
+                          </div>
+                          <Button 
+                            className="w-full mt-auto" 
+                            size="sm" 
+                            onClick={() => handleGenerateBill(table._id)}
+                          >
+                            Generate Bill
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-              ))}
+              )})}
               {tables.length === 0 && <div className="col-span-full text-center text-gray-500 py-4">No tables configured. Update the count above to create tables.</div>}
             </div>
           )}

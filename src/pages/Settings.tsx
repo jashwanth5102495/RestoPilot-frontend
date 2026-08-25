@@ -263,10 +263,6 @@ export default function Settings() {
                   <CardDescription>Manage staff access and roles.</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => {
-                    navigator.clipboard.writeText(window.location.origin + '/waiter/login');
-                    toast({ title: 'Staff Portal link copied to clipboard' });
-                  }}>Copy Staff Portal Link</Button>
                   <Button onClick={() => setShowStaffModal(true)}>Add Staff</Button>
                 </div>
               </CardHeader>
