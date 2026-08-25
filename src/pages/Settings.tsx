@@ -30,6 +30,26 @@ export default function Settings() {
   const [editingStaff, setEditingStaff] = useState<any>(null)
   const [staffForm, setStaffForm] = useState({ name: '', role: 'WAITER', loginId: '', password: '' })
 
+  // Table States
+  const [tables, setTables] = useState<any[]>([])
+  const [tableCount, setTableCount] = useState<number>(0)
+  const [tableLoading, setTableLoading] = useState(false)
+  const [editingTable, setEditingTable] = useState<any>(null)
+  const [editingTableName, setEditingTableName] = useState("")
+
+  const fetchTables = async () => {
+    setTableLoading(true)
+    try {
+      const res = await api.get('/tables')
+      setTables(res.data.data)
+      setTableCount(res.data.data.length)
+    } catch (error) {
+      console.error('Failed to fetch tables:', error)
+    } finally {
+      setTableLoading(false)
+    }
+  }
+
   const fetchStaff = async () => {
     setStaffLoading(true)
     try {
@@ -106,6 +126,7 @@ export default function Settings() {
   useEffect(() => {
     fetchProfile()
     fetchStaff()
+    fetchTables()
   }, [])
 
   const handleSaveProfile = async () => {
@@ -143,6 +164,28 @@ export default function Settings() {
     }
   }
 
+  const handleUpdateTableCount = async () => {
+    try {
+      await api.patch('/tables/count', { count: tableCount })
+      toast({ title: 'Table count updated successfully' })
+      fetchTables()
+    } catch (err: any) {
+      toast({ title: 'Error updating tables', description: err.response?.data?.message, variant: 'destructive' })
+    }
+  }
+
+  const handleRenameTable = async (id: string) => {
+    if (!editingTableName.trim()) return;
+    try {
+      await api.patch(`/tables/${id}`, { name: editingTableName })
+      toast({ title: 'Table renamed successfully' })
+      setEditingTable(null)
+      fetchTables()
+    } catch (err: any) {
+      toast({ title: 'Error renaming table', description: err.response?.data?.message, variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
@@ -161,6 +204,7 @@ export default function Settings() {
             <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
             <TabsTrigger value="billing">Billing & Tax</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="tables">Tables</TabsTrigger>
           </TabsList>
 
           <TabsContent value="restaurant">
@@ -260,7 +304,13 @@ export default function Settings() {
                   <CardTitle>Team Members</CardTitle>
                   <CardDescription>Manage staff access and roles.</CardDescription>
                 </div>
-                <Button onClick={() => setShowStaffModal(true)}>Add Staff</Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => {
+                    navigator.clipboard.writeText(window.location.origin + '/waiter/login');
+                    toast({ title: 'Staff Portal link copied to clipboard' });
+                  }}>Copy Staff Portal Link</Button>
+                  <Button onClick={() => setShowStaffModal(true)}>Add Staff</Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {staffLoading ? (
@@ -288,6 +338,64 @@ export default function Settings() {
                       </div>
                     ))}
                     {staffList.length === 0 && <div className="text-center text-gray-500 py-4">No staff members found.</div>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tables">
+            <Card>
+              <CardHeader>
+                <CardTitle>Table Configuration</CardTitle>
+                <CardDescription>Manage your restaurant tables and layout.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-end gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tableCount">Number of Tables</Label>
+                    <Input 
+                      id="tableCount" 
+                      type="number" 
+                      min="0"
+                      value={tableCount}
+                      onChange={(e: any) => setTableCount(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <Button onClick={handleUpdateTableCount}>Update Count</Button>
+                </div>
+                
+                {tableLoading ? (
+                  <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
+                    {tables.map((table: any) => (
+                      <div key={table._id} className="border p-4 rounded-lg flex flex-col items-center justify-center space-y-2 relative">
+                        {editingTable === table._id ? (
+                          <div className="flex flex-col gap-2 w-full">
+                            <Input 
+                              value={editingTableName} 
+                              onChange={(e) => setEditingTableName(e.target.value)} 
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => handleRenameTable(table._id)} className="w-full">Save</Button>
+                              <Button size="sm" variant="outline" onClick={() => setEditingTable(null)} className="w-full">Cancel</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-xl font-bold">{table.name || `Table ${table.tableNumber}`}</span>
+                            <span className="text-xs text-gray-500">#{table.tableNumber}</span>
+                            <Button variant="ghost" size="sm" className="absolute top-1 right-1 h-6 px-2 text-xs" onClick={() => {
+                              setEditingTable(table._id)
+                              setEditingTableName(table.name || `Table ${table.tableNumber}`)
+                            }}>Edit</Button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                    {tables.length === 0 && <div className="col-span-full text-center text-gray-500 py-4">No tables configured. Update the count above to create tables.</div>}
                   </div>
                 )}
               </CardContent>

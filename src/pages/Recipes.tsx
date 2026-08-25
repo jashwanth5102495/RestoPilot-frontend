@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { 
@@ -18,6 +19,21 @@ export default function Recipes() {
   const [recipes, setRecipes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [ingredients, setIngredients] = useState<any[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingRecipe, setEditingRecipe] = useState<any>(null)
+  const [recipeItems, setRecipeItems] = useState<any[]>([])
+  const [savingRecipe, setSavingRecipe] = useState(false)
+  const { toast } = useToast()
+
+  const fetchIngredients = async () => {
+    try {
+      const res = await api.get('/ingredients')
+      setIngredients(res.data.data || [])
+    } catch (error) {
+      console.error('Failed to fetch ingredients:', error)
+    }
+  }
 
   const fetchRecipes = async () => {
     try {
@@ -32,7 +48,51 @@ export default function Recipes() {
 
   useEffect(() => {
     fetchRecipes()
+    fetchIngredients()
   }, [])
+
+  const openRecipeModal = (recipeData: any) => {
+    setEditingRecipe(recipeData);
+    setRecipeItems(recipeData.recipe.items.map((i: any) => ({
+      ingredientId: i.ingredientId,
+      ingredientName: i.ingredientName,
+      quantity: i.quantity,
+      unit: i.unit
+    })));
+    setIsModalOpen(true);
+  }
+
+  const saveRecipe = async () => {
+    if (!editingRecipe) return;
+    setSavingRecipe(true);
+    try {
+      await api.post('/recipes', {
+        dishId: editingRecipe._id,
+        items: recipeItems
+      });
+      toast({ title: 'Recipe updated successfully' });
+      setIsModalOpen(false);
+      fetchRecipes();
+    } catch (err: any) {
+      toast({ title: 'Error saving recipe', description: err.response?.data?.message, variant: 'destructive' });
+    } finally {
+      setSavingRecipe(false);
+    }
+  }
+
+  const addIngredientToRecipe = (ingredientId: string) => {
+    if (!ingredientId) return;
+    const ing = ingredients.find(i => i._id === ingredientId);
+    if (!ing) return;
+    if (recipeItems.find(i => i.ingredientId === ingredientId)) return; // Already exists
+    
+    setRecipeItems([...recipeItems, {
+      ingredientId: ing._id,
+      ingredientName: ing.name,
+      quantity: 1,
+      unit: ing.unit || 'units'
+    }]);
+  }
 
   const filteredRecipes = recipes.filter(r => 
     r.name.toLowerCase().includes(search.toLowerCase())
@@ -105,7 +165,7 @@ export default function Recipes() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right pr-6">
-                      <Button variant="ghost" className="h-8 text-primary hover:text-primary hover:bg-orange-50">
+                      <Button variant="ghost" className="h-8 text-primary hover:text-primary hover:bg-orange-50" onClick={() => openRecipeModal(r)}>
                         Edit Recipe
                       </Button>
                     </TableCell>
@@ -126,6 +186,77 @@ export default function Recipes() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Recipe Modal */}
+      {isModalOpen && editingRecipe && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-[500px] max-h-[90vh] flex flex-col">
+            <CardHeader>
+              <CardTitle>Edit Recipe: {editingRecipe.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Add Ingredient</label>
+                <select 
+                  className="w-full border rounded-md p-2 bg-white"
+                  onChange={(e) => {
+                    addIngredientToRecipe(e.target.value);
+                    e.target.value = '';
+                  }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select an ingredient to add...</option>
+                  {ingredients.map(ing => (
+                    <option key={ing._id} value={ing._id}>{ing.name} ({ing.unit})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-3 mt-4">
+                <label className="text-sm font-medium">Recipe Items</label>
+                {recipeItems.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">No ingredients added yet.</p>
+                ) : (
+                  recipeItems.map((item, index) => (
+                    <div key={item.ingredientId} className="flex items-center gap-3 bg-gray-50 p-2 rounded border">
+                      <span className="flex-1 font-medium text-sm">{item.ingredientName}</span>
+                      <Input 
+                        type="number" 
+                        className="w-24 h-8" 
+                        value={item.quantity}
+                        min="0.01"
+                        step="0.01"
+                        onChange={(e) => {
+                          const newItems = [...recipeItems];
+                          newItems[index].quantity = parseFloat(e.target.value) || 0;
+                          setRecipeItems(newItems);
+                        }}
+                      />
+                      <span className="text-sm text-gray-500 w-12">{item.unit}</span>
+                      <Button 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => {
+                          setRecipeItems(recipeItems.filter((_, i) => i !== index));
+                        }}
+                      >
+                        &times;
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="flex gap-2 justify-end mt-6 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                <Button onClick={saveRecipe} disabled={savingRecipe}>
+                  {savingRecipe ? 'Saving...' : 'Save Recipe'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

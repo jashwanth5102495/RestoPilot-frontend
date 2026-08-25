@@ -31,8 +31,8 @@ const managementNav = [
   { name: 'Menu', to: '/menu', icon: MenuSquare },
   { name: 'Recipes', to: '/recipes', icon: ChefHat },
   { name: 'Inventory', to: '/inventory', icon: Package },
-  { name: 'Purchases', to: '/purchases', icon: Truck },
-  { name: 'Suppliers', to: '/suppliers', icon: Users },
+  // { name: 'Purchases', to: '/purchases', icon: Truck },
+  // { name: 'Suppliers', to: '/suppliers', icon: Users },
   { name: 'Branches', to: '/branches', icon: GitBranch },
   { name: 'Notifications', to: '/notifications', icon: Bell },
 ]
