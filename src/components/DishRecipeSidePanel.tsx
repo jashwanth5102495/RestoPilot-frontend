@@ -22,6 +22,9 @@ export default function DishRecipeSidePanel({ isOpen, dish, onClose, allIngredie
   const [recipeItems, setRecipeItems] = useState<any[]>([])
   const [originalRecipeItems, setOriginalRecipeItems] = useState<any[]>([])
   const [recipeStatus, setRecipeStatus] = useState<'Configured' | 'Missing'>('Missing')
+  const [allTemplates, setAllTemplates] = useState<any[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   
   const [selectedIngId, setSelectedIngId] = useState('')
   const [ingQuantity, setIngQuantity] = useState('')
@@ -78,6 +81,13 @@ export default function DishRecipeSidePanel({ isOpen, dish, onClose, allIngredie
       fetchRecipe()
       setSelectedIngId('')
       setIngQuantity('')
+      setShowTemplateSelector(false)
+      setSelectedTemplateId('')
+      
+      // Fetch templates for mapping
+      api.get('/recipes/templates').then(res => {
+        setAllTemplates(res.data.data || [])
+      }).catch(err => console.error(err))
     }
   }, [isOpen, dish, fetchRecipe])
 
@@ -92,13 +102,27 @@ export default function DishRecipeSidePanel({ isOpen, dish, onClose, allIngredie
     onClose()
   }
 
-  const handleAutoFill = async () => {
+  const handleAutoFill = async (templateId?: string) => {
     if (!dish) return
     setLoading(true)
     try {
-      const res = await api.get(`/recipes/templates/match?name=${encodeURIComponent(dish.name.trim())}`)
-      if (res.data.data) {
-        const templateIngredients = res.data.data.ingredients
+      let url = `/recipes/templates/match?name=${encodeURIComponent(dish.name.trim())}`;
+      const res = await api.get(url)
+      let templateData = res.data.data
+      
+      // If a specific template was selected from the dropdown, find it and override
+      if (templateId) {
+         // We don't have a direct by-id endpoint right now, but the frontend doesn't need to fetch by ID 
+         // if we can just match by the template's dishName. Wait, we DO have it if we query match?name=template.dishName
+         const selected = allTemplates.find(t => t._id === templateId);
+         if (selected) {
+           const specificRes = await api.get(`/recipes/templates/match?name=${encodeURIComponent(selected.dishName)}`);
+           templateData = specificRes.data.data;
+         }
+      }
+
+      if (templateData) {
+        const templateIngredients = templateData.ingredients
         const newRecipeItems: any[] = []
         
         templateIngredients.forEach((tIng: any) => {
@@ -115,9 +139,10 @@ export default function DishRecipeSidePanel({ isOpen, dish, onClose, allIngredie
         
         if (newRecipeItems.length > 0) {
           setRecipeItems(newRecipeItems)
+          setShowTemplateSelector(false)
           toast({
             title: "Template applied",
-            description: "Standard recipe populated. Review and save changes."
+            description: `Standard recipe '${templateData.dishName}' populated. Review and save changes.`
           })
         } else {
           toast({
@@ -128,10 +153,12 @@ export default function DishRecipeSidePanel({ isOpen, dish, onClose, allIngredie
         }
       }
     } catch (err) {
+      // If exact/fuzzy match fails, show the selector so they can pick one
+      setShowTemplateSelector(true)
       toast({
-        title: "No template found",
-        description: "Could not find a standard recipe for this dish.",
-        variant: "destructive"
+        title: "No automatic match",
+        description: "Could not automatically match a global concept. Please select one manually.",
+        variant: "default"
       })
     } finally {
       setLoading(false)
@@ -267,13 +294,44 @@ export default function DishRecipeSidePanel({ isOpen, dish, onClose, allIngredie
             <div className="space-y-6">
               
               {/* No Recipe State */}
-              {recipeItems.length === 0 && recipeStatus === 'Missing' && canEdit && (
+              {recipeItems.length === 0 && recipeStatus === 'Missing' && canEdit && !showTemplateSelector && (
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 text-center flex flex-col items-center justify-center">
                   <AlertTriangle className="w-8 h-8 text-slate-300 mb-3" />
                   <p className="text-sm text-slate-600 mb-4">This dish does not have a recipe yet.</p>
-                  <Button onClick={handleAutoFill} variant="outline" className="text-sm shadow-sm">
-                    Create / Auto-fill Recipe
+                  <Button onClick={() => handleAutoFill()} variant="outline" className="text-sm shadow-sm mb-2">
+                    Auto-match Global Concept
                   </Button>
+                  <Button onClick={() => setShowTemplateSelector(true)} variant="ghost" className="text-xs text-slate-500">
+                    Select Concept Manually
+                  </Button>
+                </div>
+              )}
+
+              {/* Template Selector */}
+              {showTemplateSelector && recipeItems.length === 0 && canEdit && (
+                <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-5">
+                  <h3 className="text-sm font-semibold text-blue-800 mb-2">Map Global Dish Concept</h3>
+                  <p className="text-xs text-blue-600 mb-4">Select the underlying global dish concept to populate the standard inventory ingredients for <b>{dish.name}</b>.</p>
+                  
+                  <select 
+                    value={selectedTemplateId}
+                    onChange={(e) => setSelectedTemplateId(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm mb-4"
+                  >
+                    <option value="">-- Search & Select Global Concept --</option>
+                    {allTemplates.map(t => (
+                      <option key={t._id} value={t._id}>{t.dishName} ({t.category})</option>
+                    ))}
+                  </select>
+                  
+                  <div className="flex gap-2">
+                    <Button onClick={() => handleAutoFill(selectedTemplateId)} disabled={!selectedTemplateId} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                      Use Standard Recipe
+                    </Button>
+                    <Button onClick={() => setShowTemplateSelector(false)} variant="outline" className="flex-1">
+                      Create Manually
+                    </Button>
+                  </div>
                 </div>
               )}
 
