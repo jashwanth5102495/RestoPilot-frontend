@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Search, Plus, MoreVertical, Edit2, Copy, Trash2, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import DishRecipeSidePanel from "@/components/DishRecipeSidePanel"
 
 export default function Menu() {
   const { toast } = useToast()
@@ -40,6 +41,7 @@ export default function Menu() {
   const [submitting, setSubmitting] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editDishId, setEditDishId] = useState<string | null>(null)
+  const [selectedDishForPanel, setSelectedDishForPanel] = useState<any | null>(null)
 
   // Form states
   const [dishName, setDishName] = useState('')
@@ -58,6 +60,65 @@ export default function Menu() {
   const [selectedIngId, setSelectedIngId] = useState('')
   const [ingQuantity, setIngQuantity] = useState('')
   const [ingUnit, setIngUnit] = useState('g')
+
+  // Auto-fill template state
+  const [templateMatchStatus, setTemplateMatchStatus] = useState<'none' | 'loading' | 'found'>('none')
+  const [unmappedTemplateIngredients, setUnmappedTemplateIngredients] = useState<any[]>([])
+
+  useEffect(() => {
+    if (editDishId && recipeItems.length > 0) return; // Don't overwrite existing recipes
+    
+    const delayDebounceFn = setTimeout(async () => {
+      if (dishName.trim().length > 2) {
+        try {
+          setTemplateMatchStatus('loading');
+          const res = await api.get(`/recipes/templates/match?name=${encodeURIComponent(dishName.trim())}`);
+          if (res.data.data) {
+            setTemplateMatchStatus('found');
+            
+            const templateIngredients = res.data.data.ingredients;
+            const newRecipeItems: any[] = [];
+            const unmappedItems: any[] = [];
+            
+            templateIngredients.forEach((tIng: any) => {
+              // Try to find matching ingredient in restaurant's inventory
+              const matchingIng = ingredients.find(i => i.name.toLowerCase() === tIng.name.toLowerCase());
+              if (matchingIng) {
+                newRecipeItems.push({
+                  ingredientId: matchingIng._id,
+                  name: matchingIng.name,
+                  quantity: tIng.quantity,
+                  unit: matchingIng.unit
+                });
+              } else {
+                unmappedItems.push({
+                  templateName: tIng.name,
+                  quantity: tIng.quantity,
+                  unit: tIng.unit
+                });
+              }
+            });
+            
+            setRecipeItems(newRecipeItems);
+            setUnmappedTemplateIngredients(unmappedItems);
+          }
+        } catch (err) {
+          // 404 or other errors mean no template found
+          setTemplateMatchStatus('none');
+          setUnmappedTemplateIngredients([]);
+          if (!editDishId) {
+             // If we're creating a new dish and no template found, keep it empty
+             setRecipeItems([]);
+          }
+        }
+      } else {
+        setTemplateMatchStatus('none');
+        setUnmappedTemplateIngredients([]);
+      }
+    }, 800);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [dishName, editDishId, ingredients]);
 
   const fetchMenuData = async () => {
     try {
@@ -151,6 +212,23 @@ export default function Menu() {
     setRecipeItems(prev => prev.filter(item => item.ingredientId !== id))
   }
 
+  const handleMapMissingIngredient = (templateItem: any, selectedMapIngId: string) => {
+    if (!selectedMapIngId) return;
+    const ing = ingredients.find(i => i._id === selectedMapIngId);
+    if (!ing) return;
+
+    setRecipeItems(prev => [...prev, {
+      ingredientId: selectedMapIngId,
+      name: ing.name,
+      quantity: templateItem.quantity,
+      unit: ing.unit
+    }]);
+
+    setUnmappedTemplateIngredients(prev => 
+      prev.filter(item => item.templateName !== templateItem.templateName)
+    );
+  }
+
   const openEditDialog = async (dish: any) => {
     setEditDishId(dish._id)
     setDishName(dish.name)
@@ -199,6 +277,8 @@ export default function Menu() {
     setIngQuantity('')
     setShowNewCategoryForm(false)
     setNewCategoryName('')
+    setTemplateMatchStatus('none')
+    setUnmappedTemplateIngredients([])
   }
 
   const handleSaveDish = async () => {
@@ -396,7 +476,15 @@ export default function Menu() {
               </div>
               
               <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900">Configure Predefined Recipe</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-semibold text-gray-900">Configure Predefined Recipe</h3>
+                  {templateMatchStatus === 'loading' && (
+                    <span className="text-xs text-blue-500 flex items-center"><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Searching template...</span>
+                  )}
+                  {templateMatchStatus === 'found' && (
+                    <span className="text-xs text-green-600 font-medium flex items-center"><CheckCircle2 className="w-3 h-3 mr-1" /> ✓ Standard recipe automatically found</span>
+                  )}
+                </div>
                 <div className="text-xs text-gray-500 bg-gray-50 p-2.5 rounded border border-gray-100">
                   Select ingredients and quantities. When this dish is sold, inventory will be deducted automatically in real-time.
                 </div>
@@ -432,11 +520,20 @@ export default function Menu() {
 
                 {recipeItems.length > 0 && (
                   <div className="border rounded-md divide-y max-h-40 overflow-y-auto bg-white">
-                    {recipeItems.map(item => (
-                      <div key={item.ingredientId} className="flex justify-between items-center p-2 px-3 text-xs">
+                    {recipeItems.map((item, idx) => (
+                      <div key={item.ingredientId || idx} className="flex justify-between items-center p-2 px-3 text-xs">
                         <span className="font-medium text-slate-700">{item.name}</span>
                         <div className="flex items-center gap-3">
-                          <span className="bg-slate-50 px-2 py-0.5 rounded border text-slate-600">{item.quantity} {item.unit}</span>
+                          <Input 
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const newQty = e.target.value;
+                              setRecipeItems(prev => prev.map(p => p.ingredientId === item.ingredientId ? {...p, quantity: newQty} : p));
+                            }}
+                            className="w-16 h-6 text-xs p-1 text-center"
+                          />
+                          <span className="text-slate-500">{item.unit}</span>
                           <Button 
                             type="button" 
                             variant="ghost" 
@@ -449,6 +546,37 @@ export default function Menu() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {unmappedTemplateIngredients.length > 0 && (
+                  <div className="mt-4 border border-orange-200 rounded-md bg-orange-50/30 overflow-hidden">
+                    <div className="bg-orange-100/50 px-3 py-2 border-b border-orange-200 flex items-center">
+                      <XCircle className="w-4 h-4 text-orange-600 mr-2" />
+                      <h4 className="text-xs font-semibold text-orange-900">Missing inventory ingredients</h4>
+                    </div>
+                    <div className="divide-y divide-orange-100">
+                      {unmappedTemplateIngredients.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 px-3 text-xs flex-wrap gap-2">
+                          <div>
+                            <span className="font-medium text-slate-700">{item.templateName}</span>
+                            <span className="text-slate-500 ml-2">({item.quantity} {item.unit})</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <select 
+                              onChange={(e) => handleMapMissingIngredient(item, e.target.value)}
+                              className="h-7 rounded-md border border-orange-200 bg-white px-2 py-0 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                              defaultValue=""
+                            >
+                              <option value="" disabled>Map to inventory...</option>
+                              {ingredients.map(i => (
+                                <option key={i._id} value={i._id}>{i.name} ({i.unit})</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -509,8 +637,10 @@ export default function Menu() {
                 </TableCell>
               </TableRow>
             ) : filteredMenu.map((dish) => (
-              <TableRow key={dish._id} className="hover:bg-gray-50/50 transition-colors">
-                <TableCell className="pl-6 font-medium text-gray-900">{dish.name}</TableCell>
+              <TableRow key={dish._id} className="hover:bg-gray-50/50 transition-colors cursor-pointer group" onClick={() => setSelectedDishForPanel(dish)}>
+                <TableCell className="pl-6 font-medium text-gray-900 group-hover:text-primary transition-colors">
+                  {dish.name}
+                </TableCell>
                 <TableCell className="text-gray-600">{dish.categoryId?.name || 'N/A'}</TableCell>
                 <TableCell className="font-medium text-gray-900">₹{dish.price}</TableCell>
                 <TableCell>
@@ -528,11 +658,11 @@ export default function Menu() {
                         <MoreVertical className="h-4 w-4 text-gray-500" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem onClick={() => openEditDialog(dish)} className="cursor-pointer flex items-center">
+                    <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditDialog(dish); }} className="cursor-pointer flex items-center">
                         <Edit2 className="w-4 h-4 mr-2" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteDish(dish._id)} className="cursor-pointer text-red-600 flex items-center focus:bg-red-50 focus:text-red-700">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteDish(dish._id); }} className="cursor-pointer text-red-600 flex items-center focus:bg-red-50 focus:text-red-700">
                         <Trash2 className="w-4 h-4 mr-2" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -553,6 +683,13 @@ export default function Menu() {
           </TableBody>
         </Table>
       </div>
+
+      <DishRecipeSidePanel 
+        isOpen={!!selectedDishForPanel}
+        dish={selectedDishForPanel}
+        onClose={() => setSelectedDishForPanel(null)}
+        allIngredients={ingredients}
+      />
     </div>
   )
 }
