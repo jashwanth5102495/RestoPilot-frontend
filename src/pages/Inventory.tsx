@@ -36,6 +36,7 @@ export default function Inventory() {
   
   // Inline restock states
   const [inlineQuantities, setInlineQuantities] = useState<Record<string, string>>({})
+  const [inlineUnits, setInlineUnits] = useState<Record<string, string>>({})
   const [inlineSubmitting, setInlineSubmitting] = useState<string | null>(null)
 
   // Quick purchase form states
@@ -162,6 +163,8 @@ export default function Inventory() {
       toast({ title: "Invalid Quantity", description: "Please enter a valid quantity.", variant: "destructive" })
       return
     }
+    
+    const selectedUnit = inlineUnits[item._id] || item.unit
 
     setInlineSubmitting(item._id)
     try {
@@ -173,13 +176,13 @@ export default function Inventory() {
           ingredientId: item._id,
           quantity: Number(qty),
           unitCost: 0,
-          unit: item.unit
+          unit: selectedUnit
         }]
       })
 
       toast({
         title: "Stock Added",
-        description: `Successfully added ${qty} ${item.unit} to ${item.name}.`
+        description: `Successfully added ${qty} ${selectedUnit} to ${item.name}.`
       })
 
       setInlineQuantities(prev => ({ ...prev, [item._id]: '' }))
@@ -450,6 +453,18 @@ export default function Inventory() {
                           value={inlineQuantities[item._id] || ''}
                           onChange={(e: any) => setInlineQuantities(prev => ({ ...prev, [item._id]: e.target.value }))}
                         />
+                        <select
+                          className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-20"
+                          value={inlineUnits[item._id] || item.unit}
+                          onChange={(e: any) => setInlineUnits(prev => ({ ...prev, [item._id]: e.target.value }))}
+                        >
+                          <option value="g">g</option>
+                          <option value="kg">kg</option>
+                          <option value="ml">ml</option>
+                          <option value="l">l</option>
+                          <option value="pcs">pcs</option>
+                          <option value="pkts">pkts</option>
+                        </select>
                         <Button 
                           size="sm"
                           variant="secondary"
