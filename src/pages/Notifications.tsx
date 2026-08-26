@@ -138,6 +138,10 @@ export default function Notifications() {
                   disabled={!phoneNumber}
                   onClick={async () => {
                     try {
+                      if (!restaurantId) {
+                        toast({ title: 'Error', description: 'Restaurant ID is missing. Please refresh the page.', variant: 'destructive' });
+                        return;
+                      }
                       toast({ title: 'Sending Test Report...' });
                       await api.post(`/restaurants/${restaurantId}/test-whatsapp-report`);
                       toast({ title: 'Test Report Sent', description: 'Check your WhatsApp for the report.' });
