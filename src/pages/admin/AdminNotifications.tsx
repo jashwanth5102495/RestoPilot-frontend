@@ -57,9 +57,22 @@ export default function AdminNotifications() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">WhatsApp Setup</h1>
-        <p className="text-gray-500">Link the system WhatsApp account to send notifications to restaurants.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+            WhatsApp Setup
+            {status === 'CONNECTED' && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Active
+              </span>
+            )}
+          </h1>
+          <p className="text-gray-500 mt-1">Link the system WhatsApp account to send notifications to restaurants.</p>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -107,7 +120,7 @@ export default function AdminNotifications() {
             {status === 'CONNECTED' && (
               <div className="flex flex-col items-center text-green-600 text-center px-4">
                 <CheckCircle2 className="w-16 h-16 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Linked Successfully</h3>
+                <h3 className="text-xl font-semibold mb-2">Active & Connected</h3>
                 <p className="text-sm text-gray-600 max-w-sm">
                   System WhatsApp account has been successfully configured and is ready to send automated daily PDF reports to restaurants.
                 </p>
