@@ -4,13 +4,14 @@ import { api } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 const PublicKds = () => {
   const { slug } = useParams();
   const { toast } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -31,7 +32,13 @@ const PublicKds = () => {
       // toast({ title: 'Error fetching orders', variant: 'destructive' });
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    fetchOrders();
   };
 
   const updateStatus = async (orderId: string, status: string) => {
@@ -44,7 +51,7 @@ const PublicKds = () => {
     }
   };
 
-  if (loading) {
+  if (loading && orders.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -57,12 +64,24 @@ const PublicKds = () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">Kitchen Display System (KDS)</h1>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-            </span>
-            Live Updates
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleManualRefresh} 
+              disabled={isRefreshing}
+              className="gap-2 text-gray-600 hover:text-gray-900"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
+              Live Updates
+            </div>
           </div>
         </div>
         
