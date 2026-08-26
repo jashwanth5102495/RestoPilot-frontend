@@ -105,9 +105,12 @@ export default function AdminNotifications() {
             )}
 
             {status === 'CONNECTED' && (
-              <div className="flex flex-col items-center text-green-600">
+              <div className="flex flex-col items-center text-green-600 text-center px-4">
                 <CheckCircle2 className="w-16 h-16 mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Linked Successfully</h3>
+                <p className="text-sm text-gray-600 max-w-sm">
+                  System WhatsApp account has been successfully configured and is ready to send automated daily PDF reports to restaurants.
+                </p>
               </div>
             )}
           </CardContent>

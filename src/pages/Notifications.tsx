@@ -128,9 +128,31 @@ export default function Notifications() {
               </div>
             )}
 
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Preferences'}
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Preferences'}
+              </Button>
+              {enabled && phoneNumber && (
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    try {
+                      toast({ title: 'Sending Test Report...' });
+                      await api.post('/restaurants/test-whatsapp-report');
+                      toast({ title: 'Test Report Sent', description: 'Check your WhatsApp for the report.' });
+                    } catch (err: any) {
+                      toast({ 
+                        title: 'Failed to send test report', 
+                        description: err.response?.data?.message || 'Unknown error', 
+                        variant: 'destructive' 
+                      });
+                    }
+                  }}
+                >
+                  Send Test Report
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
