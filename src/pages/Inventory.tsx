@@ -161,7 +161,10 @@ export default function Inventory() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="shadow-sm">
+            <Button className="shadow-sm" onClick={() => {
+              setIngredientNameInput('');
+              setQuantity('');
+            }}>
               <Plus className="w-4 h-4 mr-2" /> Add Stock
             </Button>
           </DialogTrigger>
@@ -395,7 +398,18 @@ export default function Inventory() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-gray-500 text-sm">{new Date(item.updatedAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right pr-6">
+                    <TableCell className="text-right pr-6 flex justify-end gap-2">
+                      <Button 
+                        variant="ghost" 
+                        className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => {
+                          setIngredientNameInput(item.name);
+                          setUnitInput(item.unit);
+                          setIsDialogOpen(true);
+                        }}
+                      >
+                        Restock
+                      </Button>
                       <Button variant="ghost" className="h-8 text-primary hover:text-primary hover:bg-orange-50">
                         View Movement
                       </Button>
