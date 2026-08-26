@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
-import { Plus, Minus, ShoppingCart, Loader2, Receipt, ArrowLeft } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Loader2, Receipt, ArrowLeft, RefreshCw } from 'lucide-react';
 import { printReceipt } from '../lib/printReceipt';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
@@ -60,6 +60,17 @@ const PublicWaiter = () => {
     try {
       const tablesRes = await axios.get(`${API_URL}/public/waiter/${slug}/tables`);
       setTables(tablesRes.data.data.tables);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const refreshOrder = async () => {
+    if (!activeTable || activeTable.status !== 'OCCUPIED') return;
+    try {
+      const res = await axios.get(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/order`);
+      setExistingOrder(res.data.data || null);
+      toast({ title: 'Order refreshed' });
     } catch (err) {
       console.error(err);
     }
@@ -164,6 +175,11 @@ const PublicWaiter = () => {
     <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{restaurantName} <span className="text-gray-400 font-normal">| Waiter POS</span></h1>
+        {!activeTable && (
+          <Button variant="outline" size="sm" onClick={() => { fetchTables(); toast({title: 'Tables refreshed'}); }} className="gap-2">
+            <RefreshCw className="w-4 h-4" /> Refresh
+          </Button>
+        )}
       </div>
 
       {!activeTable ? (
@@ -190,6 +206,9 @@ const PublicWaiter = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
             <h2 className="text-xl font-bold">{activeTable.name || `Table ${activeTable.tableNumber}`} Order</h2>
             <div className="flex flex-wrap gap-2">
+              <Button onClick={refreshOrder} variant="outline" title="Refresh Order" className="px-3 border-gray-300">
+                <RefreshCw className="w-4 h-4 text-gray-700" />
+              </Button>
               <Button onClick={() => setShowMobileCart(!showMobileCart)} variant="outline" className="gap-2 bg-white text-gray-700 border-gray-300 lg:hidden">
                 {showMobileCart ? <ArrowLeft className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
                 {showMobileCart ? 'Back to Menu' : `Current Order (${cart.reduce((a, b) => a + b.quantity, 0)})`}
