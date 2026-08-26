@@ -139,7 +139,7 @@ export default function Notifications() {
                   onClick={async () => {
                     try {
                       toast({ title: 'Sending Test Report...' });
-                      await api.post('/restaurants/test-whatsapp-report');
+                      await api.post(`/restaurants/${restaurantId}/test-whatsapp-report`);
                       toast({ title: 'Test Report Sent', description: 'Check your WhatsApp for the report.' });
                     } catch (err: any) {
                       toast({ 
