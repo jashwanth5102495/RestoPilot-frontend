@@ -38,7 +38,7 @@ export default function Billing() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catsRes, dishesRes] = await Promise.all([
+        const [catsRes, dishesRes, authRes] = await Promise.all([
           api.get('/categories'),
           api.get('/dishes'),
           api.get('/auth/me')
