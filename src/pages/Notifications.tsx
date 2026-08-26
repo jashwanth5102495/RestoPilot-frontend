@@ -23,7 +23,10 @@ export default function Notifications() {
       const user = res.data.data.user
       const rest = user.restaurant || {}
 
-      setRestaurantId(rest._id || "")
+      // Try user.restaurantId from JWT payload first, then fallback to rest._id
+      const actualRestId = user.restaurantId || rest._id || "";
+      setRestaurantId(actualRestId)
+      
       if (rest.notificationSettings) {
         setEnabled(rest.notificationSettings.enabled || false)
         setPhoneNumber(rest.notificationSettings.whatsappNumber || "")
