@@ -20,6 +20,7 @@ const PublicWaiter = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [cart, setCart] = useState<any[]>([]);
+  const [existingOrder, setExistingOrder] = useState<any | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [billLoading, setBillLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -63,10 +64,22 @@ const PublicWaiter = () => {
     }
   };
 
-  const openTable = (table: any) => {
+  const openTable = async (table: any) => {
     setCart([]);
     setActiveTable(table);
     setShowMobileCart(false);
+    
+    if (table.status === 'OCCUPIED') {
+      try {
+        const res = await axios.get(`${API_URL}/public/waiter/${slug}/tables/${table._id}/order`);
+        setExistingOrder(res.data.data || null);
+      } catch (err) {
+        console.error('Failed to fetch existing order', err);
+        setExistingOrder(null);
+      }
+    } else {
+      setExistingOrder(null);
+    }
   };
 
   const addToCart = (dish: any) => {
@@ -99,9 +112,14 @@ const PublicWaiter = () => {
       await axios.post(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/order`, { items });
       toast({ title: 'Order sent to Kitchen!' });
       setCart([]);
-      setActiveTable(null);
-      setShowMobileCart(false);
       fetchTables();
+      
+      // Refresh the existing order so the waiter sees the updated state without closing the table
+      try {
+        const res = await axios.get(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/order`);
+        setExistingOrder(res.data.data || null);
+      } catch (e) {}
+      
     } catch (err: any) {
       toast({ title: 'Failed to send order', description: err.response?.data?.message, variant: 'destructive' });
     } finally {
@@ -219,7 +237,25 @@ const PublicWaiter = () => {
               </div>
               
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                {cart.length === 0 ? (
+                {existingOrder && existingOrder.items?.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Already Sent to Kitchen</h4>
+                    <div className="space-y-2">
+                      {existingOrder.items.map((item: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-start p-2 bg-orange-50/50 rounded border border-orange-100">
+                          <span className="font-medium text-sm text-gray-700">{item.quantity}x {item.dishName}</span>
+                          <span className="font-bold text-sm text-gray-700">₹{item.lineTotal}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {cart.length > 0 && existingOrder && existingOrder.items?.length > 0 && (
+                  <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider mt-4">New Items</h4>
+                )}
+                
+                {cart.length === 0 && (!existingOrder || !existingOrder.items || existingOrder.items.length === 0) ? (
                   <div className="text-center text-gray-400 mt-10">
                     <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-20" />
                     <p className="text-sm">Tap items to add to order</p>
@@ -246,7 +282,7 @@ const PublicWaiter = () => {
               <div className="p-4 border-t border-gray-100 bg-gray-50">
                 <div className="flex justify-between font-bold text-lg mb-4">
                   <span>Total</span>
-                  <span className="text-primary">₹{cart.reduce((a, b) => a + (b.price * b.quantity), 0).toFixed(2)}</span>
+                  <span className="text-primary">₹{((existingOrder?.total || 0) + cart.reduce((a, b) => a + (b.price * b.quantity), 0)).toFixed(2)}</span>
                 </div>
                 <Button 
                   className="w-full h-12 text-lg" 
