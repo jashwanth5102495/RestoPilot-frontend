@@ -45,6 +45,10 @@ export default function Inventory() {
   const [quantity, setQuantity] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
 
+  const [isInventoryEnabled, setIsInventoryEnabled] = useState(false)
+  const [inventorySlug, setInventorySlug] = useState("")
+  const [settingsLoading, setSettingsLoading] = useState(true)
+
   const fetchInventoryAndSuppliers = async () => {
     try {
       const [ingRes, supRes] = await Promise.all([
@@ -53,10 +57,19 @@ export default function Inventory() {
       ])
       setIngredients(ingRes.data.data || [])
       setSuppliers(supRes.data.data || [])
+      
+      // Also fetch user's restaurant settings for the portal slug
+      const userRes = await api.get('/auth/me')
+      const rest = userRes.data.data.user.restaurant
+      if (rest) {
+        setIsInventoryEnabled(rest.isInventoryEnabled || false)
+        setInventorySlug(rest.inventorySlug || "")
+      }
     } catch (error) {
       console.error('Error fetching inventory details:', error)
     } finally {
       setLoading(false)
+      setSettingsLoading(false)
     }
   }
 
@@ -73,6 +86,23 @@ export default function Inventory() {
     fetchInventoryAndSuppliers()
     fetchCheckStatus()
   }, [])
+
+  const handleToggle = async (checked: boolean) => {
+    try {
+      const res = await api.post('/public/settings/inventory', { enabled: checked })
+      setIsInventoryEnabled(res.data.data.isInventoryEnabled)
+      setInventorySlug(res.data.data.inventorySlug || '')
+      toast({
+        title: checked ? "Public Inventory Enabled" : "Public Inventory Disabled",
+        description: checked ? "The public inventory link is now active." : "The public inventory link is now inactive.",
+      })
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Error', description: 'Failed to update settings', variant: 'destructive' })
+    }
+  }
+
+  const publicUrl = inventorySlug ? `${window.location.origin}/public-inventory/${inventorySlug}` : ''
 
   const filteredInventory = ingredients.filter(item => 
     item.name.toLowerCase().includes(search.toLowerCase())
@@ -205,6 +235,36 @@ export default function Inventory() {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Inventory</h1>
           <p className="text-gray-500">Track ingredients, stock levels and movement.</p>
         </div>
+        
+        <Card className="w-full sm:w-auto bg-slate-50 border-slate-200">
+          <CardContent className="p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-slate-700">
+                <span className="font-semibold text-sm">Public Restock Portal</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700">{isInventoryEnabled ? 'Active' : 'Disabled'}</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={isInventoryEnabled} onChange={(e) => handleToggle(e.target.checked)} disabled={settingsLoading} />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+            </div>
+            {isInventoryEnabled && inventorySlug && (
+              <div className="flex gap-2">
+                <code className="flex-1 bg-white p-2 rounded border border-slate-200 text-sm font-mono text-slate-600 truncate max-w-[200px]">
+                  {publicUrl}
+                </code>
+                <Button variant="outline" size="sm" onClick={() => {
+                  navigator.clipboard.writeText(publicUrl);
+                  toast({ title: "Copied!" });
+                }}>Copy</Button>
+                <Button variant="outline" size="sm" onClick={() => window.open(publicUrl, '_blank')}>Open</Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="shadow-sm" onClick={() => {

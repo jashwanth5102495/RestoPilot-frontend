@@ -22,6 +22,7 @@ import Tables from './pages/Tables'
 import PublicWaiter from './pages/PublicWaiter'
 import PublicBilling from './pages/PublicBilling'
 import PublicKds from './pages/PublicKds'
+import PublicInventory from './pages/PublicInventory'
 import Kitchen from './pages/Kitchen'
 import Inventory from './pages/Inventory'
 import InventoryCheck from './pages/InventoryCheck'
@@ -58,6 +59,7 @@ function App() {
         <Route path="/waiter-pos/:slug" element={<PublicWaiter />} />
         <Route path="/billing/:slug" element={<PublicBilling />} />
         <Route path="/kds/:slug" element={<PublicKds />} />
+        <Route path="/public-inventory/:slug" element={<PublicInventory />} />
         
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/login" replace />} />
