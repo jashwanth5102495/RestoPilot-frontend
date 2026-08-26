@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2 } from "lucide-react"
+import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2, Link2, Copy, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { printReceipt } from '@/lib/printReceipt'
 
@@ -28,19 +28,34 @@ export default function Billing() {
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
 
+  // Public Billing URL states
+  const [isBillingEnabled, setIsBillingEnabled] = useState(false)
+  const [billingSlug, setBillingSlug] = useState('')
+  const [settingsLoading, setSettingsLoading] = useState(true)
+
+  const publicUrl = billingSlug ? `${window.location.origin}/billing/${billingSlug}` : ''
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [catsRes, dishesRes] = await Promise.all([
           api.get('/categories'),
-          api.get('/dishes')
+          api.get('/dishes'),
+          api.get('/auth/me')
         ])
         setCategories([{ _id: 'All', name: 'All' }, ...catsRes.data.data])
         setDishes(dishesRes.data.data)
+        
+        const restaurant = authRes.data?.data?.user?.restaurant
+        if (restaurant) {
+          setIsBillingEnabled(restaurant.isBillingEnabled || false)
+          setBillingSlug(restaurant.billingSlug || '')
+        }
       } catch (error) {
         console.error('Error fetching billing data:', error)
       } finally {
         setLoading(false)
+        setSettingsLoading(false)
       }
     }
     fetchData()
@@ -123,8 +138,72 @@ export default function Billing() {
     }
   }
 
+  const handleToggle = async (checked: boolean) => {
+    try {
+      const res = await api.post('/public/settings/billing-ordering', { enabled: checked })
+      setIsBillingEnabled(res.data.data.isBillingEnabled)
+      setBillingSlug(res.data.data.billingSlug || '')
+      toast({
+        title: checked ? "Public Billing Enabled" : "Public Billing Disabled",
+        description: checked ? "The public billing link is now active." : "The public billing link is now inactive.",
+      })
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Error', description: 'Failed to update settings', variant: 'destructive' })
+    }
+  }
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(publicUrl)
+    toast({ title: 'Link copied', description: 'URL copied to clipboard' })
+  }
+
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col lg:flex-row gap-6">
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-10">
+      
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-blue-500" />
+                Public Billing Portal
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Enable a public link for a standalone billing screen (e.g. for cashiers).
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">{isBillingEnabled ? 'Active' : 'Disabled'}</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={isBillingEnabled} onChange={(e) => handleToggle(e.target.checked)} disabled={settingsLoading} />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+          </div>
+        </CardHeader>
+        {isBillingEnabled && billingSlug && (
+          <CardContent>
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <p className="text-sm font-medium text-slate-700 mb-2">Billing Link (Open this on your billing counter PC):</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-white p-2 rounded border border-slate-200 text-sm font-mono text-slate-600 truncate">
+                  {publicUrl}
+                </code>
+                <Button variant="outline" size="icon" onClick={copyLink}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+                <Button variant="default" className="gap-2" onClick={() => window.open(publicUrl, '_blank')}>
+                  <ExternalLink className="w-4 h-4" />
+                  Visit
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      <div className="h-[calc(100vh-14rem)] flex flex-col lg:flex-row gap-6">
       
       {/* Left side: Menu */}
       <div className="flex-1 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -309,11 +388,12 @@ export default function Billing() {
             ))}
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="w-1/3">Draft</Button>
-            <Button className="flex-1 font-semibold text-base shadow-md" onClick={handleGenerateBill} disabled={cart.length === 0 || isProcessing}>
-              {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generate Bill'}
-            </Button>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="w-1/3" onClick={() => { setCart([]); setCustomerName(''); setCustomerPhone(''); }}>Clear</Button>
+              <Button className="flex-1 font-semibold text-base shadow-md" onClick={handleGenerateBill} disabled={cart.length === 0 || isProcessing}>
+                {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generate Bill'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

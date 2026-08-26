@@ -20,6 +20,7 @@ import CustomerOrder from './pages/CustomerOrder'
 import Menu from './pages/Menu'
 import Tables from './pages/Tables'
 import PublicWaiter from './pages/PublicWaiter'
+import PublicBilling from './pages/PublicBilling'
 import Kitchen from './pages/Kitchen'
 import Inventory from './pages/Inventory'
 import InventoryCheck from './pages/InventoryCheck'
@@ -54,6 +55,7 @@ function App() {
         
         <Route path="/order/:slug" element={<CustomerOrder />} />
         <Route path="/waiter-pos/:slug" element={<PublicWaiter />} />
+        <Route path="/billing/:slug" element={<PublicBilling />} />
         
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/login" replace />} />
