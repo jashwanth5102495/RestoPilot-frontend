@@ -191,9 +191,29 @@ export default function PublicBilling() {
                   return (
                     <Card 
                       key={dish._id} 
-                      className={`hover:border-primary/50 transition-colors group overflow-hidden flex flex-col justify-between ${!dish.isAvailable ? 'opacity-50 grayscale' : ''}`}
+                      className={`hover:border-primary/50 transition-colors group overflow-hidden flex flex-col justify-between relative ${!dish.isAvailable ? 'opacity-50 grayscale' : ''}`}
                     >
-                      <CardContent className="p-3 flex-1">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const toggleAvailability = async () => {
+                            try {
+                              const newStatus = !dish.isAvailable;
+                              await axios.patch(`${API_URL}/public/billing/${slug}/dishes/${dish._id}/availability`, { isAvailable: newStatus });
+                              setDishes(prev => prev.map(d => d._id === dish._id ? { ...d, isAvailable: newStatus } : d));
+                              toast({ title: newStatus ? 'Dish is now available' : 'Dish marked as out of stock' });
+                            } catch (err) {
+                              toast({ title: 'Failed to update dish', variant: 'destructive' });
+                            }
+                          };
+                          toggleAvailability();
+                        }}
+                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-200 text-gray-500 hover:bg-gray-100 z-10"
+                        title={dish.isAvailable ? "Mark as Out of Stock" : "Mark as Available"}
+                      >
+                        <span className="font-serif italic text-xs font-bold">i</span>
+                      </button>
+                      <CardContent className="p-3 flex-1 pt-6">
                         <p className="text-xs text-primary font-medium mb-1">{dish.categoryId?.name}</p>
                         <h3 className="font-semibold text-gray-900 leading-tight mb-1">{dish.name}</h3>
                         <p className="font-bold text-gray-900">₹{dish.price}</p>
