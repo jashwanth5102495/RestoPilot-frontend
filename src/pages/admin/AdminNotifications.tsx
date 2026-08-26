@@ -55,6 +55,25 @@ export default function AdminNotifications() {
     }
   }
 
+  const handleReset = async () => {
+    if (!window.confirm("Are you sure you want to completely reset and disconnect the WhatsApp service? You will need to link a device again.")) {
+      return;
+    }
+    
+    setIsRequesting(true)
+    try {
+      await api.post('/admin/whatsapp/reset')
+      setStatus('INITIALIZING')
+      setQrCode(null)
+      setPairingCode(null)
+    } catch (err: any) {
+      console.error('Failed to reset whatsapp:', err)
+      setError(err.response?.data?.message || 'Failed to reset service.')
+    } finally {
+      setIsRequesting(false)
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
@@ -121,9 +140,15 @@ export default function AdminNotifications() {
               <div className="flex flex-col items-center text-amber-500 text-center px-4 py-8">
                 <Loader2 className="w-16 h-16 mb-4 animate-spin" />
                 <h3 className="text-xl font-semibold mb-2">Authenticating & Syncing</h3>
-                <p className="text-sm text-gray-600 max-w-sm">
-                  Your phone has been successfully linked. WhatsApp is now downloading your chat history to the server. This can take a minute or two depending on your account size.
+                <p className="text-sm text-gray-600 max-w-sm mb-4">
+                  Your phone has been successfully linked. WhatsApp is now downloading your chat history to the server.
                 </p>
+                <div className="text-xs text-amber-700 bg-amber-50 p-3 rounded text-left max-w-sm border border-amber-200 mb-6">
+                  <strong>Tip:</strong> If you are linking a personal number with years of chat history, this can take <strong>5-10 minutes</strong>. If it never completes, your server might be running out of memory. We highly recommend using a fresh WhatsApp number with no history for automated systems.
+                </div>
+                <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={handleReset} disabled={isRequesting}>
+                  {isRequesting ? 'Stopping...' : 'Stop & Reset Sync'}
+                </Button>
               </div>
             )}
 
@@ -131,9 +156,12 @@ export default function AdminNotifications() {
               <div className="flex flex-col items-center text-green-600 text-center px-4 py-8">
                 <CheckCircle2 className="w-16 h-16 mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Active & Connected</h3>
-                <p className="text-sm text-gray-600 max-w-sm">
+                <p className="text-sm text-gray-600 max-w-sm mb-6">
                   System WhatsApp account has been successfully configured and is ready to send automated daily PDF reports to restaurants.
                 </p>
+                <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleReset} disabled={isRequesting}>
+                  {isRequesting ? 'Disconnecting...' : 'Disconnect WhatsApp Account'}
+                </Button>
               </div>
             )}
           </CardContent>
