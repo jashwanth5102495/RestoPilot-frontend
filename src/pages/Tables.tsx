@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Link2, Copy, ExternalLink, RefreshCw } from "lucide-react"
+import { printReceipt } from "@/lib/printReceipt"
 
 export default function Tables() {
   const { toast } = useToast()
@@ -112,8 +113,13 @@ export default function Tables() {
     const order = activeOrders.find(o => o.tableId === tableId);
     if (!order) return;
     try {
-      await api.patch(`/orders/${order._id}/status`, { status: 'COMPLETED' });
+      const res = await api.patch(`/orders/${order._id}/status`, { status: 'COMPLETED' });
       toast({ title: 'Bill Generated!' });
+      
+      if (res.data?.data) {
+        printReceipt(res.data.data);
+      }
+      
       fetchTablesAndOrders();
     } catch (err: any) {
       toast({ title: 'Error generating bill', description: err.response?.data?.message, variant: 'destructive' })

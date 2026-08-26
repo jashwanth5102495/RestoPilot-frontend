@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { Plus, Minus, ShoppingCart, Loader2, Receipt, ArrowLeft } from 'lucide-react';
+import { printReceipt } from '../lib/printReceipt';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
@@ -131,8 +132,13 @@ const PublicWaiter = () => {
     if (!activeTable) return;
     setBillLoading(true);
     try {
-      await axios.post(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/bill`);
+      const res = await axios.post(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/bill`);
       toast({ title: 'Bill Generated!' });
+      
+      if (res.data?.data) {
+        printReceipt(res.data.data);
+      }
+      
       setActiveTable(null);
       setShowMobileCart(false);
       fetchTables();
