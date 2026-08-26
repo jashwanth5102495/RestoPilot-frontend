@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Package, Plus, Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table"
+import { Search, Package, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -24,10 +27,10 @@ export default function PublicInventory() {
   const [ingredients, setIngredients] = useState<any[]>([])
   const [search, setSearch] = useState('')
   
-  const [selectedItem, setSelectedItem] = useState<any>(null)
-  const [restockQty, setRestockQty] = useState('')
-  const [isRestockOpen, setIsRestockOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
+  // Inline restock states
+  const [inlineQuantities, setInlineQuantities] = useState<Record<string, string>>({})
+  const [inlineUnits, setInlineUnits] = useState<Record<string, string>>({})
+  const [inlineSubmitting, setInlineSubmitting] = useState<string | null>(null)
 
   const fetchInventory = async () => {
     try {
@@ -56,39 +59,47 @@ export default function PublicInventory() {
     item.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleRestock = async () => {
-    if (!restockQty || Number(restockQty) <= 0) {
-      toast({ title: "Invalid Quantity", description: "Please enter a valid amount.", variant: "destructive" })
+  const getStatus = (item: any) => {
+    if (item.currentStock <= 0) return 'Out of Stock'
+    if (item.currentStock <= item.minimumStock) return 'Low Stock'
+    return 'Healthy'
+  }
+
+  const handleInlineRestock = async (item: any) => {
+    const qty = inlineQuantities[item._id]
+    if (!qty || Number(qty) <= 0) {
+      toast({ title: "Invalid Quantity", description: "Please enter a valid quantity.", variant: "destructive" })
       return
     }
+    
+    const selectedUnit = inlineUnits[item._id] || item.unit
 
-    setSubmitting(true)
+    setInlineSubmitting(item._id)
     try {
       await axios.post(`${API_URL}/public/inventory/${slug}/restock`, {
         items: [{
-          ingredientId: selectedItem._id,
-          quantity: Number(restockQty),
-          unit: selectedItem.unit,
+          ingredientId: item._id,
+          quantity: Number(qty),
+          unit: selectedUnit,
           unitCost: 0
         }]
       })
 
       toast({
-        title: "Restock Successful",
-        description: `Added ${restockQty} ${selectedItem.unit} to ${selectedItem.name}`
+        title: "Stock Added",
+        description: `Successfully added ${qty} ${selectedUnit} to ${item.name}.`
       })
 
-      setRestockQty('')
-      setIsRestockOpen(false)
+      setInlineQuantities(prev => ({ ...prev, [item._id]: '' }))
       fetchInventory()
     } catch (error: any) {
       toast({
-        title: "Restock Failed",
-        description: error.response?.data?.message || "Failed to restock item.",
+        title: "Failed to Add Stock",
+        description: error.response?.data?.message || "Something went wrong.",
         variant: "destructive"
       })
     } finally {
-      setSubmitting(false)
+      setInlineSubmitting(null)
     }
   }
 
@@ -115,7 +126,7 @@ export default function PublicInventory() {
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {restaurant.logo ? (
               <img src={restaurant.logo} alt="Logo" className="w-10 h-10 rounded-full object-cover border" />
@@ -132,85 +143,102 @@ export default function PublicInventory() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto p-4 space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <Input 
-            placeholder="Search ingredients..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-12 text-lg shadow-sm"
-          />
-        </div>
-
-        {/* List */}
-        <div className="grid gap-3">
-          {filteredItems.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 bg-white rounded-xl border">
-              <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p>No ingredients found.</p>
-            </div>
-          ) : (
-            filteredItems.map(item => (
-              <Card key={item._id} className="overflow-hidden shadow-sm hover:border-primary/30 transition-colors">
-                <CardContent className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 truncate text-lg">{item.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm text-gray-500 font-medium px-2 py-0.5 bg-gray-100 rounded">
-                        Stock: {item.currentStock} {item.unit}
-                      </span>
-                    </div>
-                  </div>
-                  <Button 
-                    className="shrink-0 h-10 px-4 rounded-xl gap-2 shadow-sm"
-                    onClick={() => {
-                      setSelectedItem(item)
-                      setRestockQty('')
-                      setIsRestockOpen(true)
-                    }}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Restock
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      </div>
-
-      <Dialog open={isRestockOpen} onOpenChange={setIsRestockOpen}>
-        <DialogContent className="max-w-[90vw] w-[400px] rounded-xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Restock {selectedItem?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="p-3 bg-gray-50 rounded-lg border text-sm flex justify-between font-medium">
-              <span className="text-gray-500">Current Stock:</span>
-              <span className="text-gray-900">{selectedItem?.currentStock} {selectedItem?.unit}</span>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Add Quantity ({selectedItem?.unit})</label>
+      <div className="max-w-[1400px] mx-auto p-6 space-y-6 mt-4">
+        <Card>
+          <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-gray-50/50 rounded-t-xl">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input 
-                type="number"
-                placeholder="0"
-                value={restockQty}
-                onChange={(e) => setRestockQty(e.target.value)}
-                className="h-12 text-lg text-center"
-                autoFocus
+                placeholder="Search ingredients..." 
+                value={search}
+                onChange={(e: any) => setSearch(e.target.value)}
+                className="pl-9 bg-white"
               />
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 h-12" onClick={() => setIsRestockOpen(false)}>Cancel</Button>
-            <Button className="flex-1 h-12" onClick={handleRestock} disabled={!restockQty || submitting}>
-              {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Restock'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader className="bg-gray-50 text-gray-500">
+                <TableRow>
+                  <TableHead className="pl-6 py-4">Ingredient</TableHead>
+                  <TableHead>Current Stock</TableHead>
+                  <TableHead>Minimum Level</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="text-right pr-6">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((item) => {
+                  const status = getStatus(item)
+                  return (
+                    <TableRow key={item._id} className="hover:bg-gray-50/50 transition-colors">
+                      <TableCell className="pl-6 font-medium text-gray-900">{item.name}</TableCell>
+                      <TableCell className="font-bold text-gray-900">{item.currentStock} {item.unit}</TableCell>
+                      <TableCell className="text-gray-500">{item.minimumStock} {item.unit}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`
+                          ${status === 'Healthy' ? 'bg-green-50 text-green-700 border-green-200' : ''}
+                          ${status === 'Low Stock' ? 'bg-orange-50 text-orange-700 border-orange-200' : ''}
+                          ${status === 'Out of Stock' ? 'bg-red-50 text-red-700 border-red-200' : ''}
+                        `}>
+                          {status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-500 text-sm">{new Date(item.updatedAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right pr-6 flex justify-end gap-2 items-center">
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="number"
+                            placeholder="Qty"
+                            className="w-20 h-8 text-sm"
+                            value={inlineQuantities[item._id] || ''}
+                            onChange={(e: any) => setInlineQuantities(prev => ({ ...prev, [item._id]: e.target.value }))}
+                          />
+                          <select
+                            className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-20"
+                            value={inlineUnits[item._id] || item.unit}
+                            onChange={(e: any) => setInlineUnits(prev => ({ ...prev, [item._id]: e.target.value }))}
+                          >
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="ml">ml</option>
+                            <option value="l">l</option>
+                            <option value="pcs">pcs</option>
+                            <option value="pkts">pkts</option>
+                          </select>
+                          <Button 
+                            size="sm"
+                            variant="secondary"
+                            className="h-8"
+                            disabled={!inlineQuantities[item._id] || inlineSubmitting === item._id}
+                            onClick={() => handleInlineRestock(item)}
+                          >
+                            {inlineSubmitting === item._id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Restock'}
+                          </Button>
+                        </div>
+                        <Button variant="ghost" className="h-8 text-primary hover:text-primary hover:bg-orange-50" disabled>
+                          View Movement
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {filteredItems.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-48 text-center text-gray-500">
+                      <div className="flex flex-col items-center justify-center">
+                        <Search className="w-8 h-8 text-gray-300 mb-2" />
+                        <p>No ingredients found.</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
