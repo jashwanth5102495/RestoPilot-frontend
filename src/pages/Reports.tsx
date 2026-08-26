@@ -28,7 +28,6 @@ export default function Reports() {
   const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0)
   const totalOrders = orders.length
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
-  const totalTax = orders.reduce((sum, o) => sum + (o.tax || 0), 0)
 
   // Calculate daily sales trend (last 7 days)
   const dailyTotals: { [key: string]: number } = {}
@@ -73,12 +72,11 @@ export default function Reports() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             {[
               { title: "Total Revenue", value: `₹${Math.round(totalRevenue).toLocaleString()}` },
               { title: "Total Orders", value: totalOrders.toLocaleString() },
               { title: "Avg. Order Value", value: `₹${Math.round(avgOrderValue).toLocaleString()}` },
-              { title: "Total Tax Collected", value: `₹${Math.round(totalTax).toLocaleString()}` },
             ].map((stat, i) => (
               <Card key={i}>
                 <CardHeader className="pb-2">

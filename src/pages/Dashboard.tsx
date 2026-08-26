@@ -122,7 +122,7 @@ export default function Dashboard() {
 
     const fetchBranchStats = async () => {
       try {
-        const res = await api.get(`/restaurants/${selectedBranch}/dashboard`)
+        const res = await api.get(`/restaurants/${selectedBranch}/dashboard?timeframe=${timeFilter}`)
         setDashboardStats(res.data.data || {
           totalOrders: 0,
           totalSales: 0,
@@ -138,7 +138,7 @@ export default function Dashboard() {
     }
 
     fetchBranchStats()
-  }, [selectedBranch])
+  }, [selectedBranch, timeFilter])
 
   return (
     <div className="space-y-6" id="dashboard-content">
@@ -180,6 +180,7 @@ export default function Dashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
               <SelectItem value="week">This Week</SelectItem>
               <SelectItem value="month">This Month</SelectItem>
               <SelectItem value="year">This Year</SelectItem>
