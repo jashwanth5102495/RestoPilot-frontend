@@ -33,6 +33,10 @@ export default function Inventory() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [checkSummary, setCheckSummary] = useState<any>(null)
+  
+  // Inline restock states
+  const [inlineQuantities, setInlineQuantities] = useState<Record<string, string>>({})
+  const [inlineSubmitting, setInlineSubmitting] = useState<string | null>(null)
 
   // Quick purchase form states
   const [ingredientNameInput, setIngredientNameInput] = useState('')
@@ -149,6 +153,45 @@ export default function Inventory() {
       })
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleInlineRestock = async (item: any) => {
+    const qty = inlineQuantities[item._id]
+    if (!qty || Number(qty) <= 0) {
+      toast({ title: "Invalid Quantity", description: "Please enter a valid quantity.", variant: "destructive" })
+      return
+    }
+
+    setInlineSubmitting(item._id)
+    try {
+      await api.post('/purchases', {
+        paymentStatus: 'PAID',
+        purchaseDate: new Date(),
+        notes: `Inventory quick inline adjustment`,
+        items: [{
+          ingredientId: item._id,
+          quantity: Number(qty),
+          unitCost: 0,
+          unit: item.unit
+        }]
+      })
+
+      toast({
+        title: "Stock Added",
+        description: `Successfully added ${qty} ${item.unit} to ${item.name}.`
+      })
+
+      setInlineQuantities(prev => ({ ...prev, [item._id]: '' }))
+      fetchInventoryAndSuppliers()
+    } catch (error: any) {
+      toast({
+        title: "Failed to Add Stock",
+        description: error.response?.data?.message || "Something went wrong.",
+        variant: "destructive"
+      })
+    } finally {
+      setInlineSubmitting(null)
     }
   }
 
@@ -398,18 +441,25 @@ export default function Inventory() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-gray-500 text-sm">{new Date(item.updatedAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right pr-6 flex justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        onClick={() => {
-                          setIngredientNameInput(item.name);
-                          setUnitInput(item.unit);
-                          setIsDialogOpen(true);
-                        }}
-                      >
-                        Restock
-                      </Button>
+                    <TableCell className="text-right pr-6 flex justify-end gap-2 items-center">
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          type="number"
+                          placeholder="Qty"
+                          className="w-20 h-8 text-sm"
+                          value={inlineQuantities[item._id] || ''}
+                          onChange={(e: any) => setInlineQuantities(prev => ({ ...prev, [item._id]: e.target.value }))}
+                        />
+                        <Button 
+                          size="sm"
+                          variant="secondary"
+                          className="h-8"
+                          disabled={!inlineQuantities[item._id] || inlineSubmitting === item._id}
+                          onClick={() => handleInlineRestock(item)}
+                        >
+                          {inlineSubmitting === item._id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Restock'}
+                        </Button>
+                      </div>
                       <Button variant="ghost" className="h-8 text-primary hover:text-primary hover:bg-orange-50">
                         View Movement
                       </Button>
