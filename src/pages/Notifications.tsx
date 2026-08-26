@@ -132,9 +132,10 @@ export default function Notifications() {
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving...' : 'Save Preferences'}
               </Button>
-              {enabled && phoneNumber && (
+              {enabled && (
                 <Button 
                   variant="outline" 
+                  disabled={!phoneNumber}
                   onClick={async () => {
                     try {
                       toast({ title: 'Sending Test Report...' });
@@ -148,6 +149,7 @@ export default function Notifications() {
                       });
                     }
                   }}
+                  title={!phoneNumber ? "Please enter your WhatsApp number first" : ""}
                 >
                   Send Test Report
                 </Button>
