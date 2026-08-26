@@ -117,8 +117,18 @@ export default function AdminNotifications() {
               </div>
             )}
 
+            {status === 'AUTHENTICATING' && (
+              <div className="flex flex-col items-center text-amber-500 text-center px-4 py-8">
+                <Loader2 className="w-16 h-16 mb-4 animate-spin" />
+                <h3 className="text-xl font-semibold mb-2">Authenticating & Syncing</h3>
+                <p className="text-sm text-gray-600 max-w-sm">
+                  Your phone has been successfully linked. WhatsApp is now downloading your chat history to the server. This can take a minute or two depending on your account size.
+                </p>
+              </div>
+            )}
+
             {status === 'CONNECTED' && (
-              <div className="flex flex-col items-center text-green-600 text-center px-4">
+              <div className="flex flex-col items-center text-green-600 text-center px-4 py-8">
                 <CheckCircle2 className="w-16 h-16 mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Active & Connected</h3>
                 <p className="text-sm text-gray-600 max-w-sm">
