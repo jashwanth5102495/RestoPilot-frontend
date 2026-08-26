@@ -14,7 +14,7 @@ export default function Notifications() {
   const [restaurantId, setRestaurantId] = useState("")
 
   const [enabled, setEnabled] = useState(false)
-  const [phoneNumber, setPhoneNumber] = useState("")
+  const [chatId, setChatId] = useState("")
   const [scheduledTime, setScheduledTime] = useState("21:00")
 
   const fetchProfile = async () => {
@@ -29,7 +29,7 @@ export default function Notifications() {
       
       if (rest.notificationSettings) {
         setEnabled(rest.notificationSettings.enabled || false)
-        setPhoneNumber(rest.notificationSettings.whatsappNumber || "")
+        setChatId(rest.notificationSettings.telegramChatId || "")
         setScheduledTime(rest.notificationSettings.scheduledTime || "21:00")
       }
     } catch (error) {
@@ -51,7 +51,7 @@ export default function Notifications() {
       await api.put(`/restaurants/${restaurantId}`, {
         notificationSettings: {
           enabled,
-          whatsappNumber: phoneNumber,
+          telegramChatId: chatId,
           scheduledTime
         }
       })
@@ -75,7 +75,7 @@ export default function Notifications() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Notifications</h1>
-        <p className="text-gray-500">Configure your daily summary WhatsApp notifications.</p>
+        <p className="text-gray-500">Configure your daily summary Telegram notifications.</p>
       </div>
 
       {loading ? (
@@ -88,9 +88,9 @@ export default function Notifications() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="w-5 h-5 text-primary" />
-              WhatsApp Notifications
+              Telegram Notifications
             </CardTitle>
-            <CardDescription>Get daily sales and inventory reports sent directly to your WhatsApp.</CardDescription>
+            <CardDescription>Get daily sales and inventory reports sent directly to your Telegram.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center gap-3">
@@ -102,31 +102,42 @@ export default function Notifications() {
                 onChange={(e) => setEnabled(e.target.checked)}
               />
               <Label htmlFor="enable-notifications" className="text-base font-medium cursor-pointer">
-                Enable Daily WhatsApp Reports
+                Enable Daily Telegram Reports
               </Label>
             </div>
 
             {enabled && (
-              <div className="grid gap-4 md:grid-cols-2 p-4 bg-gray-50 rounded-lg border">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">WhatsApp Number</Label>
-                  <Input 
-                    id="phone" 
-                    placeholder="e.g. 919347564390"
-                    value={phoneNumber}
-                    onChange={(e: any) => setPhoneNumber(e.target.value)}
-                  />
-                  <p className="text-xs text-gray-500">Include country code without + sign</p>
+              <div className="grid gap-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="text-sm text-gray-600 bg-white p-4 rounded-md border mb-2">
+                  <strong>How to get your Telegram Chat ID:</strong>
+                  <ol className="list-decimal pl-5 mt-2 space-y-1">
+                    <li>Open Telegram and search for <strong>@userinfobot</strong> or <strong>@raw_data_bot</strong></li>
+                    <li>Send the message <code>/start</code></li>
+                    <li>The bot will reply with your Account Info. Copy the <strong>Id</strong> (usually a 9 or 10 digit number)</li>
+                    <li>Make sure you have also searched for and started a conversation with your System's main Telegram Bot!</li>
+                  </ol>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="time">Scheduled Time</Label>
-                  <Input 
-                    id="time" 
-                    type="time"
-                    value={scheduledTime}
-                    onChange={(e: any) => setScheduledTime(e.target.value)}
-                  />
-                  <p className="text-xs text-gray-500">When should the report be sent?</p>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="chatId">Telegram Chat ID</Label>
+                    <Input 
+                      id="chatId" 
+                      placeholder="e.g. 123456789"
+                      value={chatId}
+                      onChange={(e: any) => setChatId(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="time">Scheduled Time</Label>
+                    <Input 
+                      id="time" 
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e: any) => setScheduledTime(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500">When should the report be sent?</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -138,7 +149,7 @@ export default function Notifications() {
               {enabled && (
                 <Button 
                   variant="outline" 
-                  disabled={!phoneNumber}
+                  disabled={!chatId}
                   onClick={async () => {
                     try {
                       if (!restaurantId) {
@@ -146,8 +157,8 @@ export default function Notifications() {
                         return;
                       }
                       toast({ title: 'Sending Test Report...' });
-                      await api.post(`/restaurants/${restaurantId}/test-whatsapp-report`);
-                      toast({ title: 'Test Report Sent', description: 'Check your WhatsApp for the report.' });
+                      await api.post(`/restaurants/${restaurantId}/test-telegram-report`);
+                      toast({ title: 'Test Report Sent', description: 'Check your Telegram for the report.' });
                     } catch (err: any) {
                       toast({ 
                         title: 'Failed to send test report', 
@@ -156,7 +167,7 @@ export default function Notifications() {
                       });
                     }
                   }}
-                  title={!phoneNumber ? "Please enter your WhatsApp number first" : ""}
+                  title={!chatId ? "Please enter your Telegram Chat ID first" : ""}
                 >
                   Send Test Report
                 </Button>
