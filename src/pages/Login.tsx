@@ -203,11 +203,7 @@ export default function Login() {
               </Button>
             </Link>
             
-            <div className="pt-4">
-               <button onClick={() => navigate('/dashboard')} className="text-sm text-gray-500 hover:text-primary transition-colors flex items-center justify-center mx-auto gap-1">
-                  Skip for testing <span aria-hidden="true">&rarr;</span>
-               </button>
-            </div>
+
           </div>
         </div>
       </div>
