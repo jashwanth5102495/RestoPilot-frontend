@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2, UtensilsCrossed } from "lucide-react"
+import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2, UtensilsCrossed, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { printReceipt } from '@/lib/printReceipt'
 
@@ -356,9 +356,15 @@ export default function PublicBilling() {
             </div>
           ) : (
             <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm flex flex-col p-4">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Active Tables</h2>
-                <p className="text-sm text-gray-500">Select a table to settle its bill</p>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Active Tables</h2>
+                  <p className="text-sm text-gray-500">Select a table to settle its bill</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={refreshTables} className="gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </Button>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-y-auto">
