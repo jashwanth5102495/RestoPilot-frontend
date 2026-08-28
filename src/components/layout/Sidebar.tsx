@@ -52,7 +52,7 @@ const systemNav = [
 const staffNav = [
   { name: 'Waiter POS', to: '/waiter', icon: Utensils },
   { name: 'Kitchen Display', to: '/kitchen', icon: ChefHat },
-  { name: 'Staff Login Portal', to: '/waiter/login', icon: LogOut },
+  // { name: 'Staff Login Portal', to: '/waiter/login', icon: LogOut },
 ]
 
 export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
