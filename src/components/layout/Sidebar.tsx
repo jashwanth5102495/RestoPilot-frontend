@@ -55,7 +55,7 @@ const staffNav = [
   { name: 'Staff Login Portal', to: '/waiter/login', icon: LogOut },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const navigate = useNavigate()
   
   const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -69,7 +69,22 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full hidden lg:flex">
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <aside 
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col h-full transform transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
       <div className="p-6">
         <div className="flex items-center gap-2 mb-1">
           <div className="bg-primary p-1.5 rounded-md">
@@ -219,5 +234,6 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   )
 }

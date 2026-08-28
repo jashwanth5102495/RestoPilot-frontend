@@ -120,7 +120,7 @@ const Kitchen = () => {
           <Card key={order._id} className={order.orderStatus === 'PREPARING' ? 'border-orange-500 shadow-md' : 'border-gray-200'}>
             <CardHeader className="flex flex-row items-center justify-between bg-gray-50 border-b">
               <CardTitle className="text-lg">
-                {order.tableId ? `Table Order` : `Order #${order.orderNumber}`}
+                {order.tableId ? `Table: ${order.tableId.name || 'Unknown'}` : `Order #${order.orderNumber}`}
               </CardTitle>
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                 order.orderStatus === 'PREPARING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'

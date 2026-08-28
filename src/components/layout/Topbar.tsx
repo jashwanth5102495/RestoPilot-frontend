@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [hasNewOrder, setHasNewOrder] = useState(false)
@@ -29,7 +29,10 @@ export default function Topbar() {
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-8 shrink-0">
       <div className="flex items-center gap-4">
-        <button className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-md">
+        <button 
+          onClick={onMenuClick}
+          className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-md"
+        >
           <Menu className="w-5 h-5" />
         </button>
         <h2 className="text-xl font-semibold text-gray-900">{title}</h2>

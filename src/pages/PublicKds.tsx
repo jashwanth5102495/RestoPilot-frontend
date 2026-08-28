@@ -90,7 +90,7 @@ const PublicKds = () => {
             <Card key={order._id} className={order.orderStatus === 'PREPARING' ? 'border-orange-500 shadow-md ring-1 ring-orange-500' : 'border-gray-200 shadow-sm'}>
               <CardHeader className="flex flex-row items-center justify-between bg-white border-b px-4 py-3">
                 <CardTitle className="text-base font-bold text-gray-800">
-                  {order.tableId ? `Table Order` : `Order #${order.orderNumber}`}
+                  {order.tableId ? `Table: ${order.tableId.name || 'Unknown'}` : `Order #${order.orderNumber}`}
                 </CardTitle>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   order.orderStatus === 'PREPARING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
