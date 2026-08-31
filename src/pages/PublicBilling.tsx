@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2, UtensilsCrossed, RefreshCw } from "lucide-react"
+import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2, UtensilsCrossed, RefreshCw, Globe, MapPin, Phone, User, Printer } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { printReceipt } from '@/lib/printReceipt'
 
@@ -30,15 +30,41 @@ export default function PublicBilling() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'CARD'>('CASH')
 
-  const [activeTab, setActiveTab] = useState<'FAST_BILLING' | 'TABLES'>('FAST_BILLING')
+  const [activeTab, setActiveTab] = useState<'FAST_BILLING' | 'TABLES' | 'ONLINE'>('FAST_BILLING')
   const [tables, setTables] = useState<any[]>([])
   const [activeOrders, setActiveOrders] = useState<any[]>([])
   const [selectedTable, setSelectedTable] = useState<any>(null)
+
+  // Online Orders state
+  const [onlineOrders, setOnlineOrders] = useState<any[]>([])
+  const [selectedOnlineOrder, setSelectedOnlineOrder] = useState<any>(null)
+  const [onlineFilter, setOnlineFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL')
+  const [onlineSearch, setOnlineSearch] = useState('')
+  const prevPendingCountRef = useRef<number>(0)
 
   // Customer states
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  const fetchOnlineOrders = async (silent = false) => {
+    try {
+      const res = await axios.get(`${API_URL}/public/billing/${slug}/online-orders`)
+      const orders = res.data.data || []
+      setOnlineOrders(orders)
+      
+      const pendingCount = orders.filter((o: any) => o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED').length
+      if (!silent && pendingCount > prevPendingCountRef.current && prevPendingCountRef.current !== 0) {
+        toast({
+          title: "New Online Order Received!",
+          description: `You have incoming online order(s). Check the Online tab.`,
+        })
+      }
+      prevPendingCountRef.current = pendingCount
+    } catch (err) {
+      console.error('Failed to fetch online orders', err)
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,6 +78,8 @@ export default function PublicBilling() {
         const tablesRes = await axios.get(`${API_URL}/public/billing/${slug}/tables`)
         setTables(tablesRes.data.data.tables)
         setActiveOrders(tablesRes.data.data.activeOrders)
+
+        await fetchOnlineOrders(true)
       } catch (err: any) {
         console.error('Error fetching billing data:', err)
         setError(err.response?.data?.message || 'Failed to load Billing Portal')
@@ -60,6 +88,16 @@ export default function PublicBilling() {
       }
     }
     fetchData()
+
+    // Poll online orders and tables periodically
+    const interval = setInterval(() => {
+      fetchOnlineOrders(false)
+      if (activeTab === 'TABLES') {
+        refreshTables()
+      }
+    }, 10000)
+
+    return () => clearInterval(interval)
   }, [slug])
 
   const refreshTables = async () => {
@@ -103,7 +141,9 @@ export default function PublicBilling() {
   }
 
   const subtotal = cart.reduce((sum, item) => sum + (item.dish.price * item.quantity), 0)
-  const tax = subtotal * 0.05 // Assuming flat 5% GST for demo
+  const cgst = subtotal * 0.025
+  const sgst = subtotal * 0.025
+  const tax = cgst + sgst
   const total = subtotal + tax
 
   const handleGenerateBill = async () => {
@@ -171,6 +211,69 @@ export default function PublicBilling() {
     }
   }
 
+  const pendingOnlineOrdersCount = onlineOrders.filter(o => o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED').length
+
+  const filteredOnlineOrders = onlineOrders.filter(order => {
+    const matchesFilter = onlineFilter === 'ALL' ||
+      (onlineFilter === 'PENDING' && order.orderStatus !== 'COMPLETED' && order.orderStatus !== 'CANCELLED') ||
+      (onlineFilter === 'COMPLETED' && order.orderStatus === 'COMPLETED')
+    
+    const searchLower = onlineSearch.toLowerCase()
+    const matchesSearch = order.orderNumber.toLowerCase().includes(searchLower) ||
+      (order.customerInfo?.name || '').toLowerCase().includes(searchLower) ||
+      (order.customerInfo?.phone || '').includes(searchLower)
+
+    return matchesFilter && matchesSearch
+  })
+
+  const handleSettleOnlineOrder = async () => {
+    if (!selectedOnlineOrder) return
+    setIsProcessing(true)
+    try {
+      const res = await axios.post(`${API_URL}/public/billing/${slug}/online-orders/${selectedOnlineOrder._id}/settle`, {
+        paymentMethod
+      })
+      toast({
+        title: "Online Order Settled",
+        description: `Order ${selectedOnlineOrder.orderNumber} completed.`,
+      })
+      printReceipt(res.data.data)
+      setSelectedOnlineOrder(res.data.data)
+      fetchOnlineOrders(true)
+    } catch (err: any) {
+      toast({
+        title: "Failed to settle online order",
+        description: err.response?.data?.message || 'Error completing online order',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleUpdateOnlineStatus = async (status: string) => {
+    if (!selectedOnlineOrder) return
+    setIsProcessing(true)
+    try {
+      const res = await axios.patch(`${API_URL}/public/billing/${slug}/online-orders/${selectedOnlineOrder._id}/status`, {
+        status
+      })
+      toast({
+        title: `Order status updated to ${status}`,
+      })
+      setSelectedOnlineOrder(res.data.data)
+      fetchOnlineOrders(true)
+    } catch (err: any) {
+      toast({
+        title: "Failed to update status",
+        description: err.response?.data?.message || 'Error updating order status',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   if (loading) {
     return <div className="h-screen flex flex-col items-center justify-center text-gray-500"><Loader2 className="w-12 h-12 mb-4 text-primary animate-spin" /><p>Loading Billing Portal...</p></div>
   }
@@ -219,6 +322,24 @@ export default function PublicBilling() {
           <UtensilsCrossed className="w-6 h-6" />
           <span className="text-[10px] font-bold">Tables</span>
         </button>
+
+        <button
+          onClick={() => { setActiveTab('ONLINE'); fetchOnlineOrders(true); }}
+          className={`relative flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
+            activeTab === 'ONLINE' 
+              ? 'bg-primary/10 text-primary scale-110' 
+              : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+          }`}
+          title="Online Orders"
+        >
+          <Globe className="w-6 h-6" />
+          <span className="text-[10px] font-bold">Online</span>
+          {pendingOnlineOrdersCount > 0 && (
+            <span className="absolute top-1 right-1 w-4 h-4 bg-orange-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center animate-pulse">
+              {pendingOnlineOrdersCount}
+            </span>
+          )}
+        </button>
       </aside>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -227,18 +348,29 @@ export default function PublicBilling() {
            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             {restaurantData?.name} 
           </h1>
-          <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+          <div className="flex gap-1.5 bg-gray-100 p-1 rounded-lg">
             <button 
               onClick={() => setActiveTab('FAST_BILLING')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeTab === 'FAST_BILLING' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeTab === 'FAST_BILLING' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
             >
               POS
             </button>
             <button 
               onClick={() => { setActiveTab('TABLES'); refreshTables(); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeTab === 'TABLES' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeTab === 'TABLES' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
             >
               Tables
+            </button>
+            <button 
+              onClick={() => { setActiveTab('ONLINE'); fetchOnlineOrders(true); }}
+              className={`relative px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeTab === 'ONLINE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            >
+              Online
+              {pendingOnlineOrdersCount > 0 && (
+                <span className="inline-block ml-1 px-1 bg-orange-500 text-white rounded-full text-[9px]">
+                  {pendingOnlineOrdersCount}
+                </span>
+              )}
             </button>
           </div>
         </header>
@@ -246,7 +378,13 @@ export default function PublicBilling() {
         <header className="bg-white border-b px-6 py-4 items-center justify-between hidden sm:flex shrink-0">
           <div>
             <h1 className="text-xl font-bold text-gray-900">{restaurantData?.name}</h1>
-            <p className="text-sm text-gray-500">{activeTab === 'FAST_BILLING' ? 'Point of Sale (Fast Billing)' : 'Table Bills Management'}</p>
+            <p className="text-sm text-gray-500">
+              {activeTab === 'FAST_BILLING' 
+                ? 'Point of Sale (Fast Billing)' 
+                : activeTab === 'TABLES' 
+                  ? 'Table Bills Management' 
+                  : 'Online Orders Management'}
+            </p>
           </div>
         </header>
 
@@ -354,7 +492,7 @@ export default function PublicBilling() {
                 )}
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'TABLES' ? (
             <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm flex flex-col p-4">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -398,17 +536,150 @@ export default function PublicBilling() {
                 })}
               </div>
             </div>
+          ) : (
+            /* Online Orders tab */
+            <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm flex flex-col">
+              <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 items-center justify-between bg-gray-50/50">
+                <div className="flex items-center gap-2">
+                  {(['ALL', 'PENDING', 'COMPLETED'] as const).map(f => (
+                    <Badge 
+                      key={f}
+                      variant={onlineFilter === f ? "default" : "secondary"}
+                      className={`cursor-pointer px-3 py-1.5 text-xs font-semibold ${onlineFilter === f ? 'bg-primary text-white' : 'bg-white border text-gray-600 hover:bg-gray-100'}`}
+                      onClick={() => setOnlineFilter(f)}
+                    >
+                      {f === 'ALL' ? 'All Orders' : f === 'PENDING' ? `Pending (${pendingOnlineOrdersCount})` : 'Completed'}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input 
+                      placeholder="Search order #, customer..." 
+                      value={onlineSearch}
+                      onChange={(e) => setOnlineSearch(e.target.value)}
+                      className="pl-9 h-9 bg-white"
+                    />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => fetchOnlineOrders(true)} className="gap-1 shrink-0">
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#F8F8F7]">
+                {filteredOnlineOrders.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 py-16">
+                    <Globe className="w-12 h-12 mb-3 text-gray-300" />
+                    <p className="font-medium text-gray-600">No online orders found</p>
+                    <p className="text-xs text-gray-400 mt-1">Incoming orders from your online menu will appear here automatically.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredOnlineOrders.map(order => {
+                      const isSelected = selectedOnlineOrder?._id === order._id;
+                      const isCompleted = order.orderStatus === 'COMPLETED';
+                      return (
+                        <Card 
+                          key={order._id}
+                          onClick={() => setSelectedOnlineOrder(order)}
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            isSelected 
+                              ? 'border-primary ring-2 ring-primary/20 bg-primary/5' 
+                              : isCompleted 
+                                ? 'border-gray-200 bg-white opacity-85'
+                                : 'border-purple-200 bg-white'
+                          }`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <span className="font-bold text-base text-gray-900">{order.orderNumber}</span>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                              <Badge className={`text-[10px] uppercase font-bold ${
+                                isCompleted 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-100' 
+                                  : 'bg-purple-100 text-purple-700 hover:bg-purple-100'
+                              }`}>
+                                {order.orderStatus}
+                              </Badge>
+                            </div>
+
+                            {order.customerInfo && (
+                              <div className="my-2 p-2 bg-slate-50 rounded border border-slate-100 text-xs">
+                                <p className="font-semibold text-gray-800 flex items-center gap-1.5 truncate">
+                                  <User className="w-3 h-3 text-gray-500" /> {order.customerInfo.name || 'Walk-in Customer'}
+                                </p>
+                                {order.customerInfo.phone && (
+                                  <p className="text-gray-600 flex items-center gap-1.5 mt-0.5">
+                                    <Phone className="w-3 h-3 text-gray-500" /> {order.customerInfo.phone}
+                                  </p>
+                                )}
+                                {order.customerInfo.address && (
+                                  <p className="text-gray-600 flex items-start gap-1.5 mt-0.5 truncate">
+                                    <MapPin className="w-3 h-3 text-gray-500 shrink-0 mt-0.5" /> {order.customerInfo.address}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="text-xs text-gray-500 my-2">
+                              {order.items?.length || 0} item(s) • Total: <span className="font-bold text-gray-900 text-sm">₹{Number(order.total).toFixed(2)}</span>
+                            </div>
+
+                            <div className="flex gap-2 pt-2 mt-2 border-t border-gray-100">
+                              <Button 
+                                size="sm" 
+                                variant={isSelected ? "default" : "outline"}
+                                className="w-full text-xs h-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedOnlineOrder(order);
+                                }}
+                              >
+                                {isSelected ? 'Selected' : 'View & Settle Bill'}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
-          {/* Right side: Cart / Table Order Summary */}
+          {/* Right side: Cart / Table / Online Order Summary */}
           <div className="w-full lg:w-96 shrink-0 bg-white rounded-xl border border-gray-200 flex flex-col shadow-sm">
             <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{activeTab === 'FAST_BILLING' ? 'Current Order' : (selectedTable ? `Table: ${selectedTable.name}` : 'Select a table')}</h2>
-                <p className="text-sm text-gray-500">{activeTab === 'FAST_BILLING' ? 'Fast Billing' : (selectedTable ? 'Table Bill' : 'Waiting for selection')}</p>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {activeTab === 'FAST_BILLING' 
+                    ? 'Current Order' 
+                    : activeTab === 'TABLES' 
+                      ? (selectedTable ? `Table: ${selectedTable.name}` : 'Select a table')
+                      : (selectedOnlineOrder ? `Online: ${selectedOnlineOrder.orderNumber}` : 'Select an online order')}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {activeTab === 'FAST_BILLING' 
+                    ? 'Fast Billing' 
+                    : activeTab === 'TABLES' 
+                      ? (selectedTable ? 'Table Bill' : 'Waiting for selection')
+                      : (selectedOnlineOrder ? 'Online Order Details' : 'Waiting for selection')}
+                </p>
               </div>
               {activeTab === 'TABLES' && selectedTable && (
                 <Badge variant="outline" className="bg-orange-100 text-orange-700 border-0">Unpaid</Badge>
+              )}
+              {activeTab === 'ONLINE' && selectedOnlineOrder && (
+                <Badge variant="outline" className={`border-0 ${selectedOnlineOrder.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`}>
+                  {selectedOnlineOrder.paymentStatus || 'PENDING'}
+                </Badge>
               )}
             </div>
 
@@ -426,6 +697,22 @@ export default function PublicBilling() {
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   className="h-9"
                 />
+              </div>
+            )}
+
+            {activeTab === 'ONLINE' && selectedOnlineOrder?.customerInfo && (
+              <div className="p-4 border-b border-gray-200 bg-purple-50/40 text-xs space-y-1">
+                <p className="font-semibold text-gray-900 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-purple-600" /> {selectedOnlineOrder.customerInfo.name}
+                </p>
+                <p className="text-gray-600 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-purple-600" /> {selectedOnlineOrder.customerInfo.phone}
+                </p>
+                {selectedOnlineOrder.customerInfo.address && (
+                  <p className="text-gray-600 flex items-start gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-purple-600 shrink-0 mt-0.5" /> {selectedOnlineOrder.customerInfo.address}
+                  </p>
+                )}
               </div>
             )}
 
@@ -458,8 +745,7 @@ export default function PublicBilling() {
                     </div>
                   ))
                 )
-              ) : (
-                // Table orders view
+              ) : activeTab === 'TABLES' ? (
                 !selectedTable ? (
                   <div className="h-full flex flex-col items-center justify-center text-gray-400 min-h-[200px]">
                     <ShoppingBag className="w-12 h-12 mb-4 text-gray-200" />
@@ -476,25 +762,89 @@ export default function PublicBilling() {
                     </div>
                   ))
                 )
+              ) : (
+                /* Online tab items */
+                !selectedOnlineOrder ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 min-h-[200px]">
+                    <Globe className="w-12 h-12 mb-4 text-gray-200" />
+                    <p>Please select an online order to view details.</p>
+                  </div>
+                ) : (
+                  selectedOnlineOrder.items?.map((item: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <h4 className="font-medium text-sm text-gray-900 truncate">{item.dishName}</h4>
+                        <p className="text-sm text-gray-500">₹{item.unitPrice} × {item.quantity}</p>
+                      </div>
+                      <span className="font-semibold text-sm">₹{Number(item.lineTotal).toFixed(2)}</span>
+                    </div>
+                  ))
+                )
               )}
             </div>
 
             <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-3 rounded-b-xl">
-              <div className="space-y-1.5 text-sm">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
-                  <span>₹{activeTab === 'FAST_BILLING' ? subtotal.toFixed(2) : (selectedTable ? getTableOrder(selectedTable._id)?.subtotal.toFixed(2) : '0.00')}</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Tax</span>
-                  <span>₹{activeTab === 'FAST_BILLING' ? tax.toFixed(2) : (selectedTable ? getTableOrder(selectedTable._id)?.tax.toFixed(2) : '0.00')}</span>
-                </div>
-              </div>
-              
-              <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-                <span className="font-bold text-lg text-gray-900">Total</span>
-                <span className="font-bold text-2xl text-primary">₹{activeTab === 'FAST_BILLING' ? total.toFixed(2) : (selectedTable ? getTableOrder(selectedTable._id)?.total.toFixed(2) : '0.00')}</span>
-              </div>
+              {(() => {
+                const currentSubtotal = activeTab === 'FAST_BILLING' 
+                  ? subtotal 
+                  : activeTab === 'TABLES'
+                    ? (selectedTable ? (getTableOrder(selectedTable._id)?.subtotal || 0) : 0)
+                    : (selectedOnlineOrder ? (selectedOnlineOrder.subtotal || 0) : 0);
+                
+                const tableOrder = selectedTable ? getTableOrder(selectedTable._id) : null;
+                
+                const currentCgst = activeTab === 'FAST_BILLING'
+                  ? cgst
+                  : activeTab === 'TABLES'
+                    ? (tableOrder ? (tableOrder.cgst ?? (tableOrder.tax ? tableOrder.tax / 2 : (tableOrder.subtotal || 0) * 0.025)) : 0)
+                    : (selectedOnlineOrder ? (selectedOnlineOrder.cgst ?? (selectedOnlineOrder.tax ? selectedOnlineOrder.tax / 2 : (selectedOnlineOrder.subtotal || 0) * 0.025)) : 0);
+                
+                const currentSgst = activeTab === 'FAST_BILLING'
+                  ? sgst
+                  : activeTab === 'TABLES'
+                    ? (tableOrder ? (tableOrder.sgst ?? (tableOrder.tax ? tableOrder.tax / 2 : (tableOrder.subtotal || 0) * 0.025)) : 0)
+                    : (selectedOnlineOrder ? (selectedOnlineOrder.sgst ?? (selectedOnlineOrder.tax ? selectedOnlineOrder.tax / 2 : (selectedOnlineOrder.subtotal || 0) * 0.025)) : 0);
+                
+                const currentTax = activeTab === 'FAST_BILLING'
+                  ? tax
+                  : activeTab === 'TABLES'
+                    ? (tableOrder ? (tableOrder.tax ?? (currentCgst + currentSgst)) : 0)
+                    : (selectedOnlineOrder ? (selectedOnlineOrder.tax ?? (currentCgst + currentSgst)) : 0);
+                
+                const currentTotal = activeTab === 'FAST_BILLING'
+                  ? total
+                  : activeTab === 'TABLES'
+                    ? (tableOrder ? (tableOrder.total || 0) : 0)
+                    : (selectedOnlineOrder ? (selectedOnlineOrder.total || 0) : 0);
+
+                return (
+                  <>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between text-gray-600">
+                        <span>Subtotal</span>
+                        <span>₹{Number(currentSubtotal).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>CGST (2.5%)</span>
+                        <span>₹{Number(currentCgst).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>SGST (2.5%)</span>
+                        <span>₹{Number(currentSgst).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600 font-medium">
+                        <span>Total Tax (5% GST)</span>
+                        <span>₹{Number(currentTax).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
+                      <span className="font-bold text-lg text-gray-900">Total</span>
+                      <span className="font-bold text-2xl text-primary">₹{Number(currentTotal).toFixed(2)}</span>
+                    </div>
+                  </>
+                );
+              })()}
 
               <div className="grid grid-cols-3 gap-2 pt-2">
                 {[
@@ -517,18 +867,64 @@ export default function PublicBilling() {
                 ))}
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col gap-2 pt-2">
                 {activeTab === 'FAST_BILLING' ? (
-                  <>
+                  <div className="flex gap-2">
                     <Button variant="outline" className="w-1/3" onClick={() => { setCart([]); setCustomerName(''); setCustomerPhone(''); }}>Clear</Button>
                     <Button className="flex-1 font-semibold text-base shadow-md" onClick={handleGenerateBill} disabled={cart.length === 0 || isProcessing}>
                       {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generate Bill'}
                     </Button>
-                  </>
-                ) : (
+                  </div>
+                ) : activeTab === 'TABLES' ? (
                   <Button className="w-full font-semibold text-base shadow-md" onClick={handleSettleTable} disabled={!selectedTable || isProcessing}>
                     {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Settle Table Bill'}
                   </Button>
+                ) : (
+                  /* Online Actions */
+                  <div className="space-y-2">
+                    {selectedOnlineOrder && selectedOnlineOrder.orderStatus !== 'COMPLETED' && (
+                      <div className="flex gap-2">
+                        {selectedOnlineOrder.orderStatus === 'PLACED' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex-1 bg-white border-orange-200 text-orange-700 hover:bg-orange-50"
+                            onClick={() => handleUpdateOnlineStatus('PREPARING')}
+                            disabled={isProcessing}
+                          >
+                            Start Preparing
+                          </Button>
+                        )}
+                        {selectedOnlineOrder.orderStatus === 'PREPARING' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex-1 bg-white border-green-200 text-green-700 hover:bg-green-50"
+                            onClick={() => handleUpdateOnlineStatus('READY')}
+                            disabled={isProcessing}
+                          >
+                            Mark Ready
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    <Button 
+                      className="w-full font-semibold text-base shadow-md bg-primary hover:bg-primary/90" 
+                      onClick={handleSettleOnlineOrder} 
+                      disabled={!selectedOnlineOrder || isProcessing || selectedOnlineOrder.orderStatus === 'COMPLETED'}
+                    >
+                      {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Settle & Print Bill'}
+                    </Button>
+                    {selectedOnlineOrder && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full gap-2 text-gray-700" 
+                        onClick={() => printReceipt(selectedOnlineOrder)}
+                      >
+                        <Printer className="w-4 h-4" /> Print Bill
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

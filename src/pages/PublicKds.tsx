@@ -86,12 +86,21 @@ const PublicKds = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {orders.map(order => (
+          {orders.map(order => {
+            const isOnline = order.orderSource === 'ONLINE';
+            return (
             <Card key={order._id} className={order.orderStatus === 'PREPARING' ? 'border-orange-500 shadow-md ring-1 ring-orange-500' : 'border-gray-200 shadow-sm'}>
               <CardHeader className="flex flex-row items-center justify-between bg-white border-b px-4 py-3">
-                <CardTitle className="text-base font-bold text-gray-800">
-                  {order.tableId ? `Table: ${order.tableId.name || 'Unknown'}` : `Order #${order.orderNumber}`}
-                </CardTitle>
+                <div>
+                  <CardTitle className="text-base font-bold text-gray-800">
+                    {order.tableId ? `Table: ${order.tableId.name || 'Unknown'}` : `Order #${order.orderNumber}`}
+                  </CardTitle>
+                  {isOnline && (
+                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">
+                      ONLINE ORDER
+                    </span>
+                  )}
+                </div>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   order.orderStatus === 'PREPARING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
                 }`}>
@@ -99,7 +108,13 @@ const PublicKds = () => {
                 </span>
               </CardHeader>
               <CardContent className="p-4 bg-white">
-                <ul className="space-y-3 mb-6 min-h-[150px]">
+                {isOnline && order.customerInfo && (
+                  <div className="mb-3 p-2 bg-purple-50 rounded text-xs text-purple-900 border border-purple-100">
+                    <p className="font-semibold">{order.customerInfo.name} • {order.customerInfo.phone}</p>
+                    {order.customerInfo.address && <p className="text-purple-700 truncate mt-0.5">{order.customerInfo.address}</p>}
+                  </div>
+                )}
+                <ul className="space-y-3 mb-6 min-h-[120px]">
                   {order.items.map((item: any, idx: number) => (
                     <li key={idx} className="flex justify-between items-start border-b border-gray-100 pb-3 last:border-0">
                       <div className="flex gap-3">
@@ -124,7 +139,7 @@ const PublicKds = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          );})}
         </div>
         {orders.length === 0 && (
           <div className="text-center bg-white rounded-xl shadow-sm border border-gray-200 p-12 mt-8">

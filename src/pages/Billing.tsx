@@ -92,7 +92,9 @@ export default function Billing() {
   }
 
   const subtotal = cart.reduce((sum, item) => sum + (item.dish.price * item.quantity), 0)
-  const tax = subtotal * 0.05 // Assuming flat 5% GST for demo
+  const cgst = subtotal * 0.025
+  const sgst = subtotal * 0.025
+  const tax = cgst + sgst
   const total = subtotal + tax
 
   const handleGenerateBill = async () => {
@@ -374,7 +376,15 @@ export default function Billing() {
               <span>₹{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
-              <span>Tax (5% GST)</span>
+              <span>CGST (2.5%)</span>
+              <span>₹{cgst.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-gray-600">
+              <span>SGST (2.5%)</span>
+              <span>₹{sgst.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-gray-600 font-medium">
+              <span>Total Tax (5% GST)</span>
               <span>₹{tax.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-600">

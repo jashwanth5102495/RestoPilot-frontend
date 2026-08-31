@@ -25,10 +25,17 @@ const Kitchen = () => {
     });
     
     newSocket.on('order_sent', () => fetchOrders());
+    newSocket.on('new_online_order', () => fetchOrders());
     newSocket.on('order_status_updated', () => fetchOrders());
 
+    const handleWindowOnlineOrder = () => fetchOrders();
+    window.addEventListener('new-online-order', handleWindowOnlineOrder);
+
     setSocket(newSocket);
-    return () => { newSocket.disconnect(); };
+    return () => { 
+      newSocket.disconnect(); 
+      window.removeEventListener('new-online-order', handleWindowOnlineOrder);
+    };
   }, []);
 
   const fetchKdsSettings = async () => {
@@ -116,12 +123,21 @@ const Kitchen = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {orders.map(order => (
+        {orders.map(order => {
+          const isOnline = order.orderSource === 'ONLINE';
+          return (
           <Card key={order._id} className={order.orderStatus === 'PREPARING' ? 'border-orange-500 shadow-md' : 'border-gray-200'}>
             <CardHeader className="flex flex-row items-center justify-between bg-gray-50 border-b">
-              <CardTitle className="text-lg">
-                {order.tableId ? `Table: ${order.tableId.name || 'Unknown'}` : `Order #${order.orderNumber}`}
-              </CardTitle>
+              <div>
+                <CardTitle className="text-lg">
+                  {order.tableId ? `Table: ${order.tableId.name || 'Unknown'}` : `Order #${order.orderNumber}`}
+                </CardTitle>
+                {isOnline && (
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded text-[11px] font-bold bg-purple-100 text-purple-700">
+                    ONLINE ORDER
+                  </span>
+                )}
+              </div>
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                 order.orderStatus === 'PREPARING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
               }`}>
@@ -129,6 +145,12 @@ const Kitchen = () => {
               </span>
             </CardHeader>
             <CardContent className="p-4">
+              {isOnline && order.customerInfo && (
+                <div className="mb-3 p-2 bg-purple-50 rounded text-xs text-purple-900 border border-purple-100">
+                  <p className="font-semibold">{order.customerInfo.name} • {order.customerInfo.phone}</p>
+                  {order.customerInfo.address && <p className="text-purple-700 truncate mt-0.5">{order.customerInfo.address}</p>}
+                </div>
+              )}
               <ul className="space-y-2 mb-6">
                 {order.items.map((item: any, idx: number) => (
                   <li key={idx} className="flex justify-between items-center border-b pb-2 last:border-0">
@@ -151,7 +173,7 @@ const Kitchen = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
+        );})}
       </div>
       {orders.length === 0 && (
         <div className="text-center text-gray-500 mt-12">
