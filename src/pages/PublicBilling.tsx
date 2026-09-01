@@ -170,7 +170,7 @@ export default function PublicBilling() {
         description: `Order ${billNumber} completed via ${paymentMethod}.`,
       })
       
-      printReceipt(response.data.data.order, restaurantData?.name)
+      printReceipt(response.data.data.order, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
 
       setCart([])
       setCustomerName('')
@@ -197,7 +197,7 @@ export default function PublicBilling() {
         title: "Table Settled",
         description: `Order for ${selectedTable.name} completed successfully.`,
       })
-      printReceipt(res.data.data, restaurantData?.name)
+      printReceipt(res.data.data, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
       setSelectedTable(null)
       refreshTables()
     } catch (err: any) {
@@ -237,7 +237,7 @@ export default function PublicBilling() {
         title: "Online Order Settled",
         description: `Order ${selectedOnlineOrder.orderNumber} completed.`,
       })
-      printReceipt(res.data.data, restaurantData?.name)
+      printReceipt(res.data.data, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
       setSelectedOnlineOrder(res.data.data)
       fetchOnlineOrders(true)
     } catch (err: any) {
@@ -919,7 +919,7 @@ export default function PublicBilling() {
                       <Button 
                         variant="outline" 
                         className="w-full gap-2 text-gray-700" 
-                        onClick={() => printReceipt(selectedOnlineOrder, restaurantData?.name)}
+                        onClick={() => printReceipt(selectedOnlineOrder, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)}
                       >
                         <Printer className="w-4 h-4" /> Print Bill
                       </Button>

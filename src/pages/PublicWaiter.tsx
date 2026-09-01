@@ -16,6 +16,9 @@ const PublicWaiter = () => {
   const { toast } = useToast();
   
   const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantAddress, setRestaurantAddress] = useState('');
+  const [restaurantPhone, setRestaurantPhone] = useState('');
+  const [restaurantGstin, setRestaurantGstin] = useState('');
   const [tables, setTables] = useState<any[]>([]);
   const [activeTable, setActiveTable] = useState<any | null>(null);
   
@@ -43,7 +46,11 @@ const PublicWaiter = () => {
         axios.get(`${API_URL}/public/waiter/${slug}/menu`)
       ]);
       
-      setRestaurantName(tablesRes.data.data.restaurant?.name || 'Mystery Roaster Cafe');
+      const rest = tablesRes.data.data.restaurant || menuRes.data.data.restaurant;
+      setRestaurantName(rest?.name || 'MISTORY FAMILY RESTAURANT');
+      setRestaurantAddress(rest?.address || 'Bulahalli Gate, NH44, Avathi, Devanahalli,Karnataka-562164');
+      setRestaurantPhone(rest?.phone || '+91 97433 99992');
+      setRestaurantGstin(rest?.gstNumber || '29BVXPN5021P1ZL');
       setTables(tablesRes.data.data.tables || []);
       
       const allDishes = menuRes.data.data.dishes || [];
@@ -152,7 +159,7 @@ const PublicWaiter = () => {
       toast({ title: 'Bill Generated!' });
       
       if (res.data?.data) {
-        printReceipt(res.data.data, restaurantName);
+        printReceipt(res.data.data, restaurantName, restaurantAddress, restaurantPhone, restaurantGstin);
       }
       
       setActiveTable(null);
