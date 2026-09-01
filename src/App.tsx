@@ -56,7 +56,10 @@ function App() {
         </Route>
         
         <Route path="/order/:slug" element={<CustomerOrder />} />
+        <Route path="/waiter/:slug" element={<PublicWaiter />} />
         <Route path="/waiter-pos/:slug" element={<PublicWaiter />} />
+        <Route path="/:slug-waiter-:id" element={<PublicWaiter />} />
+        <Route path="/:slug-waiter" element={<PublicWaiter />} />
         <Route path="/billing/:slug" element={<PublicBilling />} />
         <Route path="/kds/:slug" element={<PublicKds />} />
         <Route path="/public-inventory/:slug" element={<PublicInventory />} />

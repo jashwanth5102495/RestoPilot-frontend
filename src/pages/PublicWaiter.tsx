@@ -3,14 +3,16 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast';
-import { Plus, Minus, ShoppingCart, Loader2, Receipt, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Loader2, Receipt, ArrowLeft, RefreshCw, Search } from 'lucide-react';
 import { printReceipt } from '../lib/printReceipt';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 const PublicWaiter = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const params = useParams<{ slug?: string }>();
+  const slug = params.slug || window.location.pathname.replace(/^\/(waiter\/|waiter-pos\/)?/, '').replace(/^\//, '');
   const { toast } = useToast();
   
   const [restaurantName, setRestaurantName] = useState('');
@@ -20,6 +22,7 @@ const PublicWaiter = () => {
   const [dishes, setDishes] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [cart, setCart] = useState<any[]>([]);
   const [existingOrder, setExistingOrder] = useState<any | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
@@ -40,14 +43,16 @@ const PublicWaiter = () => {
         axios.get(`${API_URL}/public/waiter/${slug}/menu`)
       ]);
       
-      setRestaurantName(tablesRes.data.data.restaurant.name);
-      setTables(tablesRes.data.data.tables);
+      setRestaurantName(tablesRes.data.data.restaurant?.name || 'Mystery Roaster Cafe');
+      setTables(tablesRes.data.data.tables || []);
       
-      const allDishes = menuRes.data.data.dishes;
+      const allDishes = menuRes.data.data.dishes || [];
       setDishes(allDishes);
       
-      const cats = Array.from(new Set(allDishes.map((d: any) => d.categoryId?.name || 'Uncategorized')));
-      setCategories(['All', ...cats]);
+      const serverCats = (menuRes.data.data.categories || []).map((c: any) => c.name);
+      const dishCats = allDishes.map((d: any) => (typeof d.categoryId === 'object' ? d.categoryId?.name : d.categoryId) || 'Uncategorized');
+      const uniqueCats = Array.from(new Set([...serverCats, ...dishCats])).filter(Boolean);
+      setCategories(['All', ...uniqueCats]);
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Failed to load Waiter Portal');
@@ -59,7 +64,7 @@ const PublicWaiter = () => {
   const fetchTables = async () => {
     try {
       const tablesRes = await axios.get(`${API_URL}/public/waiter/${slug}/tables`);
-      setTables(tablesRes.data.data.tables);
+      setTables(tablesRes.data.data.tables || []);
     } catch (err) {
       console.error(err);
     }
@@ -147,7 +152,7 @@ const PublicWaiter = () => {
       toast({ title: 'Bill Generated!' });
       
       if (res.data?.data) {
-        printReceipt(res.data.data);
+        printReceipt(res.data.data, restaurantName);
       }
       
       setActiveTable(null);
@@ -171,12 +176,24 @@ const PublicWaiter = () => {
     </div>;
   }
 
+  const getDishCategoryName = (dish: any) => {
+    if (dish.categoryId && typeof dish.categoryId === 'object') return dish.categoryId.name || 'Uncategorized';
+    return dish.categoryId || dish.category || 'Uncategorized';
+  };
+
+  const filteredDishes = dishes.filter(d => {
+    const catName = getDishCategoryName(d);
+    const matchesCategory = activeCategory === 'All' || catName === activeCategory;
+    const matchesSearch = !searchQuery.trim() || d.name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   return (
     <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{restaurantName} <span className="text-gray-400 font-normal">| Waiter POS</span></h1>
         {!activeTable && (
-          <Button variant="outline" size="sm" onClick={() => { fetchTables(); toast({title: 'Tables refreshed'}); }} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => { fetchTables(); fetchInitialData(); toast({title: 'Tables & Menu refreshed'}); }} className="gap-2">
             <RefreshCw className="w-4 h-4" /> Refresh
           </Button>
         )}
@@ -226,6 +243,18 @@ const PublicWaiter = () => {
           <div className="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
             {/* Menu Section */}
             <div className={`flex-1 flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm ${showMobileCart ? 'hidden lg:flex' : 'flex'}`}>
+              <div className="p-3 border-b border-gray-100 bg-white">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Input 
+                    placeholder="Search dish name..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9 text-sm"
+                  />
+                </div>
+              </div>
+
               <div className="p-3 md:p-4 border-b border-gray-100 flex gap-2 overflow-x-auto bg-gray-50/50 scrollbar-hide">
                 {categories.map(cat => (
                   <Button 
@@ -240,9 +269,7 @@ const PublicWaiter = () => {
                 ))}
               </div>
               <div className="flex-1 overflow-y-auto p-3 md:p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-                {dishes
-                  .filter(d => activeCategory === 'All' || (d.categoryId?.name || 'Uncategorized') === activeCategory)
-                  .map(dish => (
+                {filteredDishes.map(dish => (
                   <Card key={dish._id} className="cursor-pointer hover:border-primary transition-colors flex flex-col shadow-sm" onClick={() => addToCart(dish)}>
                     <div className="h-24 md:h-32 bg-gray-100 w-full rounded-t-xl bg-cover bg-center" style={{ backgroundImage: `url(${dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'})`}}></div>
                     <CardContent className="p-3 flex flex-col flex-1">
