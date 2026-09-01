@@ -31,6 +31,7 @@ export default function Billing() {
   // Public Billing URL states
   const [isBillingEnabled, setIsBillingEnabled] = useState(false)
   const [billingSlug, setBillingSlug] = useState('')
+  const [restaurantName, setRestaurantName] = useState('')
   const [settingsLoading, setSettingsLoading] = useState(true)
 
   const publicUrl = billingSlug ? `${window.location.origin}/billing/${billingSlug}` : ''
@@ -50,6 +51,7 @@ export default function Billing() {
         if (restaurant) {
           setIsBillingEnabled(restaurant.isBillingEnabled || false)
           setBillingSlug(restaurant.billingSlug || '')
+          setRestaurantName(restaurant.name || '')
         }
       } catch (error) {
         console.error('Error fetching billing data:', error)
@@ -124,7 +126,7 @@ export default function Billing() {
       })
       
       // Print the receipt
-      printReceipt(response.data.data.order)
+      printReceipt(response.data.data.order, restaurantName)
 
       setCart([])
       setCustomerName('')

@@ -1,4 +1,4 @@
-export const printReceipt = (order: any) => {
+export const printReceipt = (order: any, restaurantName?: string) => {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -12,6 +12,7 @@ export const printReceipt = (order: any) => {
   const doc = iframe.contentWindow?.document;
   if (!doc) return;
 
+  const resolvedRestaurantName = restaurantName || order.restaurantName || order.restaurantId?.name || (typeof window !== 'undefined' ? localStorage.getItem('restaurantName') : '') || 'Mystery Roaster Cafe';
   const orderNumber = order.orderNumber || order.bill?.billNumber || 'N/A';
   const customerName = order.customerInfo?.name || 'Walk-in';
   const customerPhone = order.customerInfo?.phone || '';
@@ -33,57 +34,154 @@ export const printReceipt = (order: any) => {
     const itemTotal = item.lineTotal || (price * quantity);
     return `
       <tr>
-        <td style="text-align: left; padding: 4px 0;">${name}</td>
-        <td style="text-align: center; padding: 4px 0;">${quantity}</td>
-        <td style="text-align: right; padding: 4px 0;">₹${Number(price).toFixed(2)}</td>
-        <td style="text-align: right; padding: 4px 0;">₹${Number(itemTotal).toFixed(2)}</td>
+        <td style="text-align: left; padding: 3px 0; word-break: break-word;">${name}</td>
+        <td style="text-align: center; padding: 3px 0; white-space: nowrap;">${quantity}</td>
+        <td style="text-align: right; padding: 3px 0; white-space: nowrap;">₹${Number(price).toFixed(2)}</td>
+        <td style="text-align: right; padding: 3px 0; white-space: nowrap;">₹${Number(itemTotal).toFixed(2)}</td>
       </tr>
     `;
   }).join('');
 
   const html = `
+    <!DOCTYPE html>
     <html>
       <head>
-        <title>Receipt</title>
+        <meta charset="utf-8" />
+        <title>Receipt - ${orderNumber}</title>
         <style>
-          body { font-family: monospace; padding: 10px; font-size: 14px; color: #000; }
-          .header { text-align: center; margin-bottom: 20px; }
-          .header h2 { margin: 0; font-size: 18px; text-transform: uppercase; }
-          .info { margin-bottom: 15px; border-bottom: 1px dashed #000; padding-bottom: 10px; font-size: 13px; line-height: 1.4; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 13px; }
-          th { border-bottom: 1px dashed #000; padding-bottom: 5px; text-align: left; font-weight: normal; }
+          @page {
+            size: 72mm auto;
+            margin: 0;
+          }
+          @media print {
+            html, body {
+              width: 72mm !important;
+              max-width: 72mm !important;
+              margin: 0 !important;
+              padding: 2mm 3mm !important;
+            }
+          }
+          * {
+            box-sizing: border-box;
+          }
+          body {
+            width: 72mm;
+            max-width: 72mm;
+            margin: 0 auto;
+            padding: 3mm 2mm;
+            font-family: 'Courier New', Courier, monospace, sans-serif;
+            font-size: 11px;
+            line-height: 1.3;
+            color: #000;
+            background: #fff;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 10px;
+          }
+          .header h2 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .header p {
+            margin: 2px 0 0 0;
+            font-size: 10px;
+          }
+          .divider {
+            border-top: 1px dashed #000;
+            margin: 8px 0;
+          }
+          .info {
+            font-size: 11px;
+            line-height: 1.35;
+          }
+          .info div {
+            display: flex;
+            justify-content: space-between;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 6px 0;
+            font-size: 11px;
+          }
+          th {
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 4px 0;
+            text-align: left;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+          }
           th.center { text-align: center; }
           th.right { text-align: right; }
-          .total-section { border-top: 1px dashed #000; padding-top: 10px; margin-bottom: 20px; }
-          .line-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
-          .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #000; }
-          .footer { text-align: center; font-size: 12px; margin-top: 15px; border-top: 1px dashed #000; padding-top: 10px; }
+          .total-section {
+            border-top: 1px dashed #000;
+            padding-top: 6px;
+            font-size: 11px;
+          }
+          .line-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 13px;
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px dashed #000;
+          }
+          .footer {
+            text-align: center;
+            font-size: 11px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed #000;
+          }
+          .footer .blunet {
+            margin-top: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+          }
         </style>
       </head>
       <body>
         <div class="header">
-          <h2>RestoPilot</h2>
-          <p style="margin: 5px 0;">Tax Invoice / Receipt</p>
+          <h2>${resolvedRestaurantName}</h2>
+          <p>Tax Invoice / Receipt</p>
         </div>
+
+        <div class="divider"></div>
+
         <div class="info">
-          <div><strong>Order #:</strong> ${orderNumber}</div>
-          <div><strong>Date:</strong> ${date}</div>
-          <div><strong>Customer:</strong> ${customerName}${customerPhone ? ` (${customerPhone})` : ''}</div>
-          <div><strong>Payment Method:</strong> ${paymentMethod}</div>
+          <div><span>Order #:</span> <strong>${orderNumber}</strong></div>
+          <div><span>Date:</span> <span>${date}</span></div>
+          <div><span>Customer:</span> <span>${customerName}${customerPhone ? ` (${customerPhone})` : ''}</span></div>
+          <div><span>Payment:</span> <strong>${paymentMethod}</strong></div>
         </div>
+
         <table>
           <thead>
             <tr>
-              <th>Item</th>
-              <th class="center">Qty</th>
-              <th class="right">Rate</th>
-              <th class="right">Amount</th>
+              <th style="width: 44%;">Item</th>
+              <th class="center" style="width: 14%;">Qty</th>
+              <th class="right" style="width: 20%;">Rate</th>
+              <th class="right" style="width: 22%;">Amt</th>
             </tr>
           </thead>
           <tbody>
             ${itemsHtml}
           </tbody>
         </table>
+
         <div class="total-section">
           <div class="line-row">
             <span>Subtotal:</span>
@@ -102,7 +200,7 @@ export const printReceipt = (order: any) => {
             <span>SGST (2.5%):</span>
             <span>₹${Number(sgst).toFixed(2)}</span>
           </div>
-          <div class="line-row" style="font-weight: 600;">
+          <div class="line-row" style="font-weight: bold;">
             <span>Total GST (5%):</span>
             <span>₹${Number(tax).toFixed(2)}</span>
           </div>
@@ -111,8 +209,10 @@ export const printReceipt = (order: any) => {
             <span>₹${Number(total).toFixed(2)}</span>
           </div>
         </div>
+
         <div class="footer">
-          Thank you for dining with us!
+          <div>Thank you for dining with us!</div>
+          <div class="blunet">BluNet IT Services</div>
         </div>
       </body>
     </html>
