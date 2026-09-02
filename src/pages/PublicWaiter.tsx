@@ -47,8 +47,8 @@ const PublicWaiter = () => {
       ]);
       
       const rest = tablesRes.data.data.restaurant || menuRes.data.data.restaurant;
-      setRestaurantName(rest?.name || 'MISTORY FAMILY RESTAURANT');
-      setRestaurantAddress(rest?.address || 'Bulahalli Gate, NH44, Avathi, Devanahalli,Karnataka-562164');
+      setRestaurantName(rest?.name || 'MYSTERY FAMILY RESTAURANT');
+      setRestaurantAddress(rest?.address || 'NH47, Bulahalli Gate, Avathi, Devanahalli, Karnataka 562164');
       setRestaurantPhone(rest?.phone || '+91 97433 99992');
       setRestaurantGstin(rest?.gstNumber || '29BVXPN5021P1ZL');
       setTables(tablesRes.data.data.tables || []);

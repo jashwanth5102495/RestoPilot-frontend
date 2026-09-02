@@ -18,8 +18,8 @@ export const printReceipt = (
   const doc = iframe.contentWindow?.document;
   if (!doc) return;
 
-  const resolvedRestaurantName = (restaurantName || order.restaurantName || order.restaurantId?.name || (typeof window !== 'undefined' ? localStorage.getItem('restaurantName') : '') || 'MISTORY FAMILY RESTAURANT').toUpperCase();
-  const resolvedRestaurantAddress = restaurantAddress || order.restaurantAddress || order.restaurantId?.address || (typeof window !== 'undefined' ? localStorage.getItem('restaurantAddress') : '') || 'Bulahalli Gate, NH44, Avathi, Devanahalli,Karnataka-562164';
+  const resolvedRestaurantName = (restaurantName || order.restaurantName || order.restaurantId?.name || (typeof window !== 'undefined' ? localStorage.getItem('restaurantName') : '') || 'MYSTERY FAMILY RESTAURANT').toUpperCase();
+  const resolvedRestaurantAddress = restaurantAddress || order.restaurantAddress || order.restaurantId?.address || (typeof window !== 'undefined' ? localStorage.getItem('restaurantAddress') : '') || 'NH47, Bulahalli Gate, Avathi, Devanahalli, Karnataka 562164';
   const resolvedPhone = restaurantPhone || order.restaurantPhone || order.restaurantId?.phone || (typeof window !== 'undefined' ? localStorage.getItem('restaurantPhone') : '') || '+91 97433 99992';
   const resolvedGstin = restaurantGstin || order.gstNumber || order.restaurantId?.gstNumber || (typeof window !== 'undefined' ? localStorage.getItem('restaurantGstin') : '') || '29BVXPN5021P1ZL';
 
@@ -74,9 +74,21 @@ export const printReceipt = (
   const total = order.total !== undefined ? Number(order.total) : order.bill?.totalAmount !== undefined ? Number(order.bill.totalAmount) : Number((subtotal + cgst + sgst - discount).toFixed(2));
 
   // Address lines formatting
-  const addressLines = resolvedRestaurantAddress.includes(',') 
-    ? resolvedRestaurantAddress.split(',').map(s => s.trim()).filter(Boolean)
-    : [resolvedRestaurantAddress];
+  let addressLines: string[] = [];
+  if (resolvedRestaurantAddress.includes(',')) {
+    const parts = resolvedRestaurantAddress.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 4) {
+      addressLines = [
+        `${parts[0]}, ${parts[1]},`,
+        `${parts[2]}, ${parts[3]},`,
+        parts.slice(4).join(', ')
+      ];
+    } else {
+      addressLines = parts;
+    }
+  } else {
+    addressLines = [resolvedRestaurantAddress];
+  }
 
   const html = `
     <!DOCTYPE html>
@@ -302,7 +314,7 @@ export const printReceipt = (
         </div>
 
         <div class="footer">
-          <div>Thank you for visit</div>
+          <div>Thanks for Visiting! See You Again!</div>
           <div class="blunet">BluNet IT Services</div>
         </div>
       </body>
