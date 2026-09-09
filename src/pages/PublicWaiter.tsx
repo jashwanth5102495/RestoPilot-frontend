@@ -5,10 +5,19 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast';
-import { Plus, Minus, ShoppingCart, Loader2, Receipt, ArrowLeft, RefreshCw, Search } from 'lucide-react';
 import { printReceipt } from '../lib/printReceipt';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    const host = window.location.hostname;
+    const protocol = window.location.protocol;
+    return `${protocol}//${host}:5000/api/v1`;
+  }
+  return 'http://localhost:5000/api/v1';
+};
+
+const API_URL = getApiBaseUrl();
 
 const PublicWaiter = () => {
   const params = useParams<{ slug?: string }>();

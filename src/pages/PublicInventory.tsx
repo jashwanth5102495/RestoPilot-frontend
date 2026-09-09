@@ -8,15 +8,25 @@ import { Badge } from "@/components/ui/badge"
 import { 
   Table, 
   TableBody, 
-  TableCell, 
-  TableHead, 
+  TableCell,
+  TableHead,
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
 import { Search, Package, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    const host = window.location.hostname;
+    const protocol = window.location.protocol;
+    return `${protocol}//${host}:5000/api/v1`;
+  }
+  return 'http://localhost:5000/api/v1';
+};
+
+const API_URL = getApiBaseUrl();
 
 export default function PublicInventory() {
   const { slug } = useParams()
