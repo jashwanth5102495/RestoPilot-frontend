@@ -153,13 +153,25 @@ export default function Billing() {
       const res = await api.post('/public/settings/billing-ordering', { enabled: checked })
       setIsBillingEnabled(res.data.data.isBillingEnabled)
       setBillingSlug(res.data.data.billingSlug || '')
+      
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (user.restaurant) {
+        user.restaurant.isBillingEnabled = res.data.data.isBillingEnabled
+        user.restaurant.billingSlug = res.data.data.billingSlug
+        localStorage.setItem('user', JSON.stringify(user))
+      }
+
       toast({
         title: checked ? "Public Billing Enabled" : "Public Billing Disabled",
         description: checked ? "The public billing link is now active." : "The public billing link is now inactive.",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast({ title: 'Error', description: 'Failed to update settings', variant: 'destructive' })
+      toast({ 
+        title: 'Error', 
+        description: error.response?.data?.message || 'Failed to update billing settings', 
+        variant: 'destructive' 
+      })
     }
   }
 

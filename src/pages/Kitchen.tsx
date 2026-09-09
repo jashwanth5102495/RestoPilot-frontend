@@ -58,13 +58,25 @@ const Kitchen = () => {
       const res = await api.post('/public/settings/kds', { enabled: checked });
       setIsKdsEnabled(res.data.data.isKdsEnabled);
       setKdsSlug(res.data.data.kdsSlug || '');
+      
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user.restaurant) {
+        user.restaurant.isKdsEnabled = res.data.data.isKdsEnabled;
+        user.restaurant.kdsSlug = res.data.data.kdsSlug;
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+
       toast({
         title: checked ? "Public KDS Enabled" : "Public KDS Disabled",
         description: checked ? "The public KDS link is now active." : "The public KDS link is now inactive.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast({ title: 'Error', description: 'Failed to update settings', variant: 'destructive' });
+      toast({ 
+        title: 'Error', 
+        description: error.response?.data?.message || 'Failed to update kitchen display settings', 
+        variant: 'destructive' 
+      });
     }
   };
 

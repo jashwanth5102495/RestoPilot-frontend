@@ -94,13 +94,25 @@ export default function Tables() {
       const res = await api.post('/public/settings/waiter-ordering', { enabled: checked })
       setIsWaiterEnabled(res.data.data.isWaiterOrderingEnabled)
       setWaiterSlug(res.data.data.waiterSlug || '')
+      
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (user.restaurant) {
+        user.restaurant.isWaiterOrderingEnabled = res.data.data.isWaiterOrderingEnabled
+        user.restaurant.waiterSlug = res.data.data.waiterSlug
+        localStorage.setItem('user', JSON.stringify(user))
+      }
+
       toast({
         title: checked ? "Waiter Portal Enabled" : "Waiter Portal Disabled",
         description: checked ? "The public waiter link is now active." : "The public waiter link is now inactive.",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast({ title: 'Error', description: 'Failed to update settings', variant: 'destructive' })
+      toast({ 
+        title: 'Error', 
+        description: error.response?.data?.message || 'Failed to update waiter settings', 
+        variant: 'destructive' 
+      })
     }
   }
 
