@@ -13,10 +13,14 @@ import jsPDF from "jspdf"
 
 export default function Dashboard() {
   const { toast } = useToast()
+  const userStored = JSON.parse(localStorage.getItem('user') || '{}')
   const [inventoryAlerts, setInventoryAlerts] = useState<any[]>([])
   const [timeFilter, setTimeFilter] = useState("today")
   const [branches, setBranches] = useState<any[]>([])
-  const [selectedBranch, setSelectedBranch] = useState<string>('')
+  const [selectedBranch, setSelectedBranch] = useState<string>(() => {
+    const u = JSON.parse(localStorage.getItem('user') || '{}')
+    return u?.restaurant?._id || ''
+  })
   const [dashboardStats, setDashboardStats] = useState({
     totalOrders: 0,
     totalSales: 0,
@@ -77,14 +81,12 @@ export default function Dashboard() {
         const branchList = branchRes.data.data || []
         setBranches(branchList)
         
-        const userStored = JSON.parse(localStorage.getItem('user') || '{}')
         const currentActiveId = userStored?.restaurant?._id
-        
-        if (currentActiveId && branchList.some((b: any) => b._id === currentActiveId)) {
+        if (currentActiveId) {
           setSelectedBranch(currentActiveId)
-        } else if (branchList.length > 1 && !selectedBranch) {
-          setSelectedBranch('overall') // Default to overall if multiple branches exist
-        } else if (branchList.length > 0 && !selectedBranch) {
+        } else if (branchList.length > 1) {
+          setSelectedBranch('overall')
+        } else if (branchList.length > 0) {
           setSelectedBranch(branchList[0]._id)
         }
       } catch (e) {
@@ -144,8 +146,12 @@ export default function Dashboard() {
     <div className="space-y-6" id="dashboard-content">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Good morning, Owner</h1>
-          <p className="text-gray-500">Here's what's happening at your restaurant {timeFilter === 'today' ? 'today' : 'lately'}.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            Good morning, {userStored?.restaurant?.name || userStored?.name || 'Owner'}
+          </h1>
+          <p className="text-gray-500">
+            Here's what's happening at {userStored?.restaurant?.name || 'your restaurant'} {timeFilter === 'today' ? 'today' : (timeFilter === 'all' ? 'overall' : 'lately')}.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           {branches.length > 1 && (

@@ -58,9 +58,13 @@ export default function OnlineOrders() {
         title: checked ? "Online Ordering Enabled" : "Online Ordering Disabled",
         description: checked ? "Your menu is now public." : "Your menu is now private.",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast({ title: 'Error', description: 'Failed to update settings', variant: 'destructive' })
+      toast({ 
+        title: 'Error', 
+        description: error.response?.data?.message || 'Failed to update online ordering settings', 
+        variant: 'destructive' 
+      })
     }
   }
 
