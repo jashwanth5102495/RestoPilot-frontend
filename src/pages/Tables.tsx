@@ -253,12 +253,16 @@ export default function Tables() {
                           <div className="bg-white/60 p-2 rounded-md mb-3 flex-1">
                             <p className="text-xs font-bold text-gray-500 mb-1 border-b pb-1">Current Order</p>
                             <ul className="text-sm space-y-1">
-                              {order.items.map((item: any, i: number) => (
-                                <li key={i} className="flex justify-between">
-                                  <span className="truncate pr-2">{item.quantity}x {item.dishName}</span>
-                                  <span className="font-medium text-primary">₹{item.lineTotal}</span>
-                                </li>
-                              ))}
+                              {(order.items || []).map((item: any, i: number) => {
+                                const itemName = item.dishName || item.dish?.name || item.name || 'Item';
+                                const lineTotal = item.lineTotal !== undefined ? item.lineTotal : (item.price * item.quantity);
+                                return (
+                                  <li key={i} className="flex justify-between">
+                                    <span className="truncate pr-2">{item.quantity}x {itemName}</span>
+                                    <span className="font-medium text-primary">₹{lineTotal}</span>
+                                  </li>
+                                );
+                              })}
                             </ul>
                             <div className="flex justify-between font-bold text-sm mt-2 pt-1 border-t">
                               <span>Total</span>

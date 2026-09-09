@@ -291,7 +291,9 @@ export default function Billing() {
                       <span className="font-serif italic text-xs font-bold">i</span>
                     </button>
                     <CardContent className="p-3 flex-1 pt-6">
-                      <p className="text-xs text-primary font-medium mb-1">{dish.categoryId?.name}</p>
+                      <p className="text-xs text-primary font-medium mb-1">
+                        {typeof dish.categoryId === 'object' ? (dish.categoryId?.name || 'General') : (dish.categoryId || 'General')}
+                      </p>
                       <h3 className="font-semibold text-gray-900 leading-tight mb-1">{dish.name}</h3>
                       <p className="font-bold text-gray-900">₹{dish.price}</p>
                     </CardContent>

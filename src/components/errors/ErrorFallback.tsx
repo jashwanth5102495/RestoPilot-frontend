@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 
@@ -19,17 +19,34 @@ export function ErrorFallback({ resetError }: ErrorFallbackProps) {
         
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-gray-900">Something went wrong</h2>
-          <p className="text-gray-500 text-sm">
-            We encountered an unexpected problem. Our team has been notified.
+          <p className="text-red-500 text-xs font-mono bg-red-50 p-3 rounded-lg border border-red-200 text-left max-h-32 overflow-y-auto">
+            {error?.message || 'An unexpected error occurred.'}
+          </p>
+          <p className="text-gray-500 text-xs">
+            We encountered an issue loading this page. Click below to reload.
           </p>
         </div>
 
-        <Button 
-          onClick={resetError}
-          className="w-full"
-        >
-          Try Again
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button 
+            onClick={() => {
+              if (resetError) resetError();
+              window.location.reload();
+            }}
+            className="w-full"
+          >
+            Reload Page
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => {
+              window.location.href = '/dashboard';
+            }}
+            className="w-full"
+          >
+            Return to Dashboard
+          </Button>
+        </div>
       </div>
     </div>
   );
