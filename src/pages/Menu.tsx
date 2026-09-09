@@ -232,8 +232,9 @@ export default function Menu() {
   const openEditDialog = async (dish: any) => {
     setEditDishId(dish._id)
     setDishName(dish.name)
-    setSelectedCategoryId(dish.categoryId?._id || '')
-    setPrice(dish.price.toString())
+    const catId = typeof dish.categoryId === 'object' ? (dish.categoryId?._id || '') : (dish.categoryId || '')
+    setSelectedCategoryId(catId)
+    setPrice(dish.price !== undefined ? dish.price.toString() : '')
     setTaxRate(dish.taxRate?.toString() || '5')
     setDescription(dish.description || '')
     
