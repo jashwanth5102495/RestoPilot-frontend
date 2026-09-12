@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast';
 import { printReceipt } from '../lib/printReceipt';
+import { Loader2, RefreshCw, ArrowLeft, ShoppingCart, Receipt, Search, Minus, Plus } from 'lucide-react';
 
 const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
