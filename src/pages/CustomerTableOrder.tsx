@@ -19,6 +19,7 @@ export default function CustomerTableOrder() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [restaurant, setRestaurant] = useState<any>(null)
+  const [tableInfo, setTableInfo] = useState<any>(null)
   const [categories, setCategories] = useState<any[]>([])
   const [dishes, setDishes] = useState<any[]>([])
   
@@ -34,6 +35,7 @@ export default function CustomerTableOrder() {
       try {
         const res = await axios.get(`${API_URL}/public/table-qr/${slug}/tables/${tableId}/menu`)
         setRestaurant(res.data.data.restaurant)
+        setTableInfo(res.data.data.table)
         setCategories([{ _id: 'All', name: 'All' }, ...res.data.data.categories])
         setDishes(res.data.data.dishes)
       } catch (err: any) {
@@ -100,7 +102,7 @@ export default function CustomerTableOrder() {
         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
       </div>
       <h1 className="text-3xl font-bold text-green-900 mb-2">Order Received!</h1>
-      <p className="text-green-700 max-w-md">Your order has been sent to the kitchen. It will be served at your table shortly.</p>
+      <p className="text-green-700 max-w-md">Your order for <strong className="underline">{tableInfo ? (tableInfo.name || `Table ${tableInfo.tableNumber}`) : 'your table'}</strong> has been sent to the kitchen. It will be served shortly!</p>
       <Button className="mt-8" onClick={() => setOrderSuccess(false)}>Order More</Button>
     </div>
   )
@@ -203,7 +205,7 @@ export default function CustomerTableOrder() {
 
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <Button onClick={handleSubmitOrder} className="w-full h-12 text-lg bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
-                  {isSubmitting ? 'Processing...' : 'Place Order for this Table'}
+                  {isSubmitting ? 'Processing...' : `Place Order for ${tableInfo ? (tableInfo.name || 'Table ' + tableInfo.tableNumber) : 'this Table'}`}
                 </Button>
               </div>
             </div>
