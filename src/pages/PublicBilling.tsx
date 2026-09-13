@@ -74,6 +74,25 @@ export default function PublicBilling() {
           description: `You have incoming online order(s). Check the Online tab.`,
         })
       }
+
+  const fetchQrTableOrders = async (silent = false) => {
+    try {
+      const res = await axios.get(`${API_URL}/public/billing/${slug}/qr-table-orders`)
+      const orders = res.data.data || []
+      setQrTableOrders(orders)
+      
+      const pendingCount = orders.filter((o: any) => o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED').length
+      if (!silent && pendingCount > prevQrPendingCountRef.current && prevQrPendingCountRef.current !== 0) {
+        toast({
+          title: "New QR Table Order Received!",
+          description: `You have incoming QR table order(s). Check the QR Orders tab.`,
+        })
+      }
+      prevQrPendingCountRef.current = pendingCount
+    } catch (err) {
+      console.error('Failed to fetch QR table orders', err)
+    }
+  }
       prevPendingCountRef.current = pendingCount
     } catch (err) {
       console.error('Failed to fetch online orders', err)
@@ -94,6 +113,7 @@ export default function PublicBilling() {
         setActiveOrders(tablesRes.data.data.activeOrders)
 
         await fetchOnlineOrders(true)
+        await fetchQrTableOrders(true)
       } catch (err: any) {
         console.error('Error fetching billing data:', err)
         setError(err.response?.data?.message || err.message || 'Failed to load Billing Portal')
@@ -106,6 +126,7 @@ export default function PublicBilling() {
     // Poll online orders and tables periodically
     const interval = setInterval(() => {
       fetchOnlineOrders(false)
+      fetchQrTableOrders(false)
       if (activeTab === 'TABLES') {
         refreshTables()
       }
