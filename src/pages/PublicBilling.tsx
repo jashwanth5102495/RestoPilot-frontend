@@ -67,7 +67,7 @@ export default function PublicBilling() {
       const orders = res.data.data || []
       setOnlineOrders(orders)
       
-      const pendingCount = orders.filter((o: any) => o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED').length
+      const pendingCount = orders.filter((o: any) => o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED' && o.orderStatus !== 'DRAFT' && (o.items?.length || 0) > 0).length
       if (!silent && pendingCount > prevPendingCountRef.current && prevPendingCountRef.current !== 0) {
         toast({
           title: "New Online Order Received!",
@@ -247,7 +247,7 @@ export default function PublicBilling() {
   }
 
   const pendingOnlineOrdersCount = onlineOrders.filter(o => o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED').length
-  const pendingQrOrdersCount = qrTableOrders.filter(o => o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED').length
+  const pendingQrOrdersCount = qrTableOrders.filter(o => o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED' && o.orderStatus !== 'DRAFT' && (o.items?.length || 0) > 0).length
   const filteredQrOrders = qrTableOrders.filter(order => {
     if (!qrTableSearch) return true
     const s = qrTableSearch.toLowerCase()
