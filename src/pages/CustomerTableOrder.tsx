@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { api } from '@/lib/api'
+import axios from 'axios'
+
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+  return `${window.location.protocol}//${window.location.hostname}:5000/api/v1`
+}
+const API_URL = getApiBaseUrl()
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ShoppingBag, Minus, Plus, Utensils, AlertTriangle } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 
@@ -27,7 +32,7 @@ export default function CustomerTableOrder() {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const res = await api.get(`/public/table-qr/${slug}/tables/${tableId}/menu`)
+        const res = await axios.get(`${API_URL}/public/table-qr/${slug}/tables/${tableId}/menu`)
         setRestaurant(res.data.data.restaurant)
         setCategories([{ _id: 'All', name: 'All' }, ...res.data.data.categories])
         setDishes(res.data.data.dishes)
@@ -71,7 +76,7 @@ export default function CustomerTableOrder() {
       const payload = {
         items: cart.map(c => ({ dishId: c.dish._id, quantity: c.quantity }))
       }
-      await api.post(`/public/table-qr/${slug}/tables/${tableId}/order`, payload)
+      await axios.post(`${API_URL}/public/table-qr/${slug}/tables/${tableId}/order`, payload)
       setOrderSuccess(true)
       setCart([])
     } catch (err) {

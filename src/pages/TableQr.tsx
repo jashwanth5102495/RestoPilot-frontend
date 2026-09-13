@@ -1,51 +1,36 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Link2, Copy, ExternalLink, RefreshCw } from "lucide-react"
-import { printReceipt } from "@/lib/printReceipt"
-import { QRCodeSVG } from "qrcode.react"
-import { QrCode, Printer } from "lucide-react"
+import { Loader2, QrCode, Printer, Download, CheckCircle2, XCircle, RefreshCw } from "lucide-react"
+import { QRCodeSVG, QRCodeCanvas } from "qrcode.react"
 
-export default function Tables() {
+export default function TableQr() {
   const { toast } = useToast()
-  
-  // Table States
-  const [tables, setTables] = useState<any[]>([])
-  const [activeOrders, setActiveOrders] = useState<any[]>([])
-  const [tableCount, setTableCount] = useState<number>(0)
-  const [tableLoading, setTableLoading] = useState(true)
-  const [editingTable, setEditingTable] = useState<any>(null)
-  const [editingTableName, setEditingTableName] = useState("")
 
-  // Waiter URL states
-  const [isWaiterEnabled, setIsWaiterEnabled] = useState(false)
-  const [waiterSlug, setWaiterSlug] = useState('')
-  const [isTableQrEnabled, setIsTableQrEnabled] = useState(false)
-  const [tableQrSlug, setTableQrSlug] = useState('')
+  const [tables, setTables] = useState<any[]>([])
+  const [tableLoading, setTableLoading] = useState(true)
   const [settingsLoading, setSettingsLoading] = useState(true)
 
-  const publicUrl = waiterSlug ? `${window.location.origin}/waiter-pos/${waiterSlug}` : ''
+  const [isTableQrEnabled, setIsTableQrEnabled] = useState(false)
+  const [tableQrSlug, setTableQrSlug] = useState("")
+  const [restaurantName, setRestaurantName] = useState("")
 
-  const fetchTablesAndOrders = async () => {
+  const canvasRefs = useRef<{ [id: string]: HTMLCanvasElement | null }>({})
+
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+
+  const getTableQrUrl = (tableId: string) =>
+    tableQrSlug ? `${baseUrl}/table/${tableQrSlug}/${tableId}` : ""
+
+  const fetchTables = async () => {
     setTableLoading(true)
     try {
-      const res = await api.get('/tables')
-      const ordersRes = await api.get('/orders')
-      
-      setTables(res.data.data)
-      setTableCount(res.data.data.length)
-      
-      // Filter out completed and cancelled orders
-      const active = ordersRes.data.data.filter((o: any) => 
-        o.orderStatus !== 'COMPLETED' && o.orderStatus !== 'CANCELLED' && o.tableId
-      )
-      setActiveOrders(active)
-    } catch (error) {
-      console.error('Failed to fetch tables:', error)
+      const res = await api.get("/tables")
+      setTables(res.data.data || [])
+    } catch (err) {
+      console.error("Failed to fetch tables:", err)
     } finally {
       setTableLoading(false)
     }
@@ -53,274 +38,310 @@ export default function Tables() {
 
   const fetchSettings = async () => {
     try {
-      const res = await api.get('/auth/me') 
+      const res = await api.get("/auth/me")
       const restaurant = res.data?.data?.user?.restaurant
       if (restaurant) {
-        setIsWaiterEnabled(restaurant.isWaiterOrderingEnabled || false)
         setIsTableQrEnabled(restaurant.isTableQrEnabled || false)
-        setWaiterSlug(restaurant.waiterSlug || '')
-        setTableQrSlug(restaurant.tableQrSlug || '')
+        setTableQrSlug(restaurant.tableQrSlug || "")
+        setRestaurantName(restaurant.name || "Restaurant")
       }
-    } catch (error) {
-      console.error(error)
+    } catch (err) {
+      console.error(err)
     } finally {
       setSettingsLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchTablesAndOrders()
+    fetchTables()
     fetchSettings()
   }, [])
 
-  const handleUpdateTableCount = async () => {
+  const handleQrToggle = async (checked: boolean) => {
     try {
-      await api.patch('/tables/count', { count: tableCount })
-      toast({ title: 'Table count updated successfully' })
-      fetchTablesAndOrders()
-    } catch (err: any) {
-      toast({ title: 'Error updating tables', description: err.response?.data?.message, variant: 'destructive' })
-    }
-  }
-
-  const handleRenameTable = async (id: string) => {
-    if (!editingTableName.trim()) return;
-    try {
-      await api.patch(`/tables/${id}`, { name: editingTableName })
-      toast({ title: 'Table renamed successfully' })
-      setEditingTable(null)
-      fetchTablesAndOrders()
-    } catch (err: any) {
-      toast({ title: 'Error renaming table', description: err.response?.data?.message, variant: 'destructive' })
-    }
-  }
-
-  const handleToggle = async (checked: boolean) => {
-    try {
-      const res = await api.post('/public/settings/waiter-ordering', { enabled: checked })
-      setIsWaiterEnabled(res.data.data.isWaiterOrderingEnabled)
-      setWaiterSlug(res.data.data.waiterSlug || '')
-      
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      if (user.restaurant) {
-        user.restaurant.isWaiterOrderingEnabled = res.data.data.isWaiterOrderingEnabled
-        user.restaurant.waiterSlug = res.data.data.waiterSlug
-        localStorage.setItem('user', JSON.stringify(user))
-      }
-
-      toast({
-        title: checked ? "Waiter Portal Enabled" : "Waiter Portal Disabled",
-        description: checked ? "The public waiter link is now active." : "The public waiter link is now inactive.",
-      })
-    } catch (error: any) {
-      console.error(error)
-      toast({ 
-        title: 'Error', 
-        description: error.response?.data?.message || 'Failed to update waiter settings', 
-        variant: 'destructive' 
-      })
-    }
-  }
-
-  
-  const handleQrToggle = async (checked) => {
-    try {
-      const res = await api.post('/public/settings/table-qr', { enabled: checked })
+      const res = await api.post("/public/settings/table-qr", { enabled: checked })
       setIsTableQrEnabled(res.data.data.isTableQrEnabled)
-      setTableQrSlug(res.data.data.tableQrSlug || '')
-      
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      setTableQrSlug(res.data.data.tableQrSlug || "")
+
+      const user = JSON.parse(localStorage.getItem("user") || "{}")
       if (user.restaurant) {
         user.restaurant.isTableQrEnabled = res.data.data.isTableQrEnabled
         user.restaurant.tableQrSlug = res.data.data.tableQrSlug
-        localStorage.setItem('user', JSON.stringify(user))
+        localStorage.setItem("user", JSON.stringify(user))
       }
 
       toast({
         title: checked ? "Table QR Ordering Enabled" : "Table QR Ordering Disabled",
-        description: checked ? "Customers can now scan QR codes." : "QR ordering is now inactive.",
+        description: checked
+          ? "Customers can now scan QR codes to order from their table."
+          : "QR ordering is now inactive.",
       })
-    } catch (error) {
-      console.error(error)
-      toast({ 
-        title: 'Error', 
-        description: error?.response?.data?.message || 'Failed to update QR settings', 
-        variant: 'destructive' 
-      })
-    }
-  }
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(publicUrl)
-    toast({ title: 'Link copied', description: 'URL copied to clipboard' })
-  }
-
-  const handleGenerateBill = async (tableId: string) => {
-    const order = activeOrders.find(o => o.tableId === tableId);
-    if (!order) return;
-    try {
-      const res = await api.patch(`/orders/${order._id}/status`, { status: 'COMPLETED' });
-      toast({ title: 'Bill Generated!' });
-      
-      if (res.data?.data) {
-        printReceipt(res.data.data);
-      }
-      
-      fetchTablesAndOrders();
     } catch (err: any) {
-      toast({ title: 'Error generating bill', description: err.response?.data?.message, variant: 'destructive' })
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "Failed to update QR settings",
+        variant: "destructive",
+      })
     }
+  }
+
+  const handlePrintSingle = (table: any) => {
+    const qrUrl = getTableQrUrl(table._id)
+    if (!qrUrl) return
+    const canvas = canvasRefs.current[table._id]
+    if (!canvas) return
+
+    const dataUrl = canvas.toDataURL("image/png")
+    const tableName = table.name || `Table ${table.tableNumber}`
+    const win = window.open("", "_blank", "width=400,height=600")
+    if (!win) return
+
+    win.document.write(`<!DOCTYPE html>
+<html><head><title>QR - ${tableName}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fff}
+.card{width:300px;border:2px solid #e5e7eb;border-radius:16px;padding:28px 20px;text-align:center}
+.rest{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.tbl{font-size:26px;font-weight:800;color:#111827;margin-bottom:18px}
+.qr{background:#f9fafb;border-radius:12px;padding:14px;display:inline-block;margin-bottom:18px}
+.scan{font-size:14px;color:#374151;font-weight:600;margin-bottom:4px}
+.sub{font-size:11px;color:#9ca3af}
+hr{border:none;border-top:1px solid #e5e7eb;margin:14px 0}
+.url{font-size:8px;color:#d1d5db;word-break:break-all}
+</style></head>
+<body><div class="card">
+<p class="rest">${restaurantName}</p>
+<h1 class="tbl">${tableName}</h1>
+<div class="qr"><img src="${dataUrl}" width="200" height="200" /></div>
+<p class="scan">Scan to Order</p>
+<p class="sub">Point your phone camera at the QR code to view the menu and place your order.</p>
+<hr/><p class="url">${qrUrl}</p>
+</div>
+<script>window.onload=()=>{window.print();window.close()}</script>
+</body></html>`)
+    win.document.close()
+  }
+
+  const handlePrintAll = () => {
+    if (!tableQrSlug) return
+    let cards = ""
+    tables.forEach((table) => {
+      const canvas = canvasRefs.current[table._id]
+      if (!canvas) return
+      const dataUrl = canvas.toDataURL("image/png")
+      const tableName = table.name || `Table ${table.tableNumber}`
+      const qrUrl = getTableQrUrl(table._id)
+      cards += `<div class="card">
+<p class="rest">${restaurantName}</p>
+<h1 class="tbl">${tableName}</h1>
+<div class="qr"><img src="${dataUrl}" width="180" height="180" /></div>
+<p class="scan">Scan to Order</p>
+<p class="sub">Point your phone camera at the QR code.</p>
+<hr/><p class="url">${qrUrl}</p>
+</div>`
+    })
+
+    const win = window.open("", "_blank")
+    if (!win) return
+    win.document.write(`<!DOCTYPE html>
+<html><head><title>All QR Codes - ${restaurantName}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#fff;padding:20px}
+.grid{display:flex;flex-wrap:wrap;gap:20px;justify-content:center}
+.card{width:220px;border:2px solid #e5e7eb;border-radius:12px;padding:18px 14px;text-align:center;page-break-inside:avoid}
+.rest{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px}
+.tbl{font-size:19px;font-weight:800;color:#111827;margin-bottom:12px}
+.qr{background:#f9fafb;border-radius:10px;padding:10px;display:inline-block;margin-bottom:10px}
+.scan{font-size:11px;color:#374151;font-weight:600;margin-bottom:2px}
+.sub{font-size:9px;color:#9ca3af}
+hr{border:none;border-top:1px solid #e5e7eb;margin:10px 0}
+.url{font-size:7px;color:#d1d5db;word-break:break-all}
+@media print{.card{page-break-inside:avoid}}
+</style></head>
+<body><div class="grid">${cards}</div>
+<script>window.onload=()=>{window.print();window.close()}</script>
+</body></html>`)
+    win.document.close()
+  }
+
+  const handleDownload = (table: any) => {
+    const canvas = canvasRefs.current[table._id]
+    if (!canvas) return
+    const link = document.createElement("a")
+    link.download = `QR-${table.name || "Table-" + table.tableNumber}.png`
+    link.href = canvas.toDataURL("image/png")
+    link.click()
   }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tables</h1>
-        <p className="text-gray-500">Manage your restaurant layout and Waiter ordering portal.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Table QR Ordering</h1>
+        <p className="text-gray-500">
+          Enable QR-based ordering so customers scan a code at their table and order directly from
+          their phone. Orders appear in billing and KDS tagged to the correct table.
+        </p>
       </div>
 
+      {/* Toggle */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Link2 className="w-5 h-5 text-blue-500" />
-                Public Waiter Portal
+                <QrCode className="w-5 h-5 text-orange-500" />
+                Customer QR Ordering
               </CardTitle>
               <CardDescription>
-                Enable a public link for waiters to take orders on tablets without needing to log in.
+                When enabled, each table gets a unique QR code customers can scan to place orders.
               </CardDescription>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700">{isWaiterEnabled ? 'Active' : 'Disabled'}</span>
+              <span className="text-sm font-medium text-gray-700">
+                {isTableQrEnabled ? "Active" : "Disabled"}
+              </span>
+              {isTableQrEnabled ? (
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+              ) : (
+                <XCircle className="w-5 h-5 text-gray-400" />
+              )}
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={isWaiterEnabled} onChange={(e) => handleToggle(e.target.checked)} disabled={settingsLoading} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isTableQrEnabled}
+                  onChange={(e) => handleQrToggle(e.target.checked)}
+                  disabled={settingsLoading}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500" />
               </label>
             </div>
           </div>
         </CardHeader>
-        {isWaiterEnabled && waiterSlug && (
-          <CardContent>
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <p className="text-sm font-medium text-slate-700 mb-2">Waiter Ordering Link (Save this to your tablets):</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-white p-2 rounded border border-slate-200 text-sm font-mono text-slate-600 truncate">
-                  {publicUrl}
-                </code>
-                <Button variant="outline" size="icon" onClick={copyLink}>
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button variant="default" className="gap-2" onClick={() => window.open(publicUrl, '_blank')}>
-                  <ExternalLink className="w-4 h-4" />
-                  Visit
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        )}
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Table Configuration</CardTitle>
-              <CardDescription>Set the number of tables in your restaurant and rename them.</CardDescription>
+      {/* QR Grid */}
+      {isTableQrEnabled && tableQrSlug ? (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <CardTitle>Table QR Codes</CardTitle>
+                <CardDescription>
+                  Print these and place them on tables. Each code links uniquely to that table so
+                  orders are tagged correctly in billing and KDS.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={fetchTables}>
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </Button>
+                {tables.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="gap-2 bg-orange-500 hover:bg-orange-600"
+                    onClick={handlePrintAll}
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print All
+                  </Button>
+                )}
+              </div>
             </div>
-            <Button variant="outline" size="sm" className="gap-2" onClick={fetchTablesAndOrders}>
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-end gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="tableCount">Number of Tables</Label>
-              <Input 
-                id="tableCount" 
-                type="number" 
-                min="0"
-                value={tableCount}
-                onChange={(e: any) => setTableCount(parseInt(e.target.value) || 0)}
-              />
-            </div>
-            <Button onClick={handleUpdateTableCount}>Update Count</Button>
-          </div>
-          
-          {tableLoading ? (
-            <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
-              {tables.map((table: any) => {
-                const order = activeOrders.find(o => o.tableId === table._id);
-                return (
-                <div key={table._id} className={`border p-4 rounded-lg flex flex-col space-y-3 relative ${table.status === 'OCCUPIED' ? 'bg-red-50 border-red-500' : 'bg-green-50 border-green-200'}`}>
-                  {editingTable === table._id ? (
-                    <div className="flex flex-col gap-2 w-full">
-                      <Input 
-                        value={editingTableName} 
-                        onChange={(e) => setEditingTableName(e.target.value)} 
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleRenameTable(table._id)} className="w-full">Save</Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditingTable(null)} className="w-full">Cancel</Button>
+          </CardHeader>
+          <CardContent>
+            {tableLoading ? (
+              <div className="flex justify-center p-12">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+              </div>
+            ) : tables.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <QrCode className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="font-medium text-gray-700 mb-1">No tables configured yet.</p>
+                <p className="text-sm">
+                  Go to the <strong>Tables</strong> page to add tables first. Then come back here to
+                  generate QR codes.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {tables.map((table: any) => {
+                  const qrUrl = getTableQrUrl(table._id)
+                  const tableName = table.name || `Table ${table.tableNumber}`
+                  return (
+                    <div
+                      key={table._id}
+                      className="border border-gray-200 rounded-xl p-4 flex flex-col items-center gap-3 bg-white shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">
+                        {restaurantName}
+                      </p>
+                      <h3 className="text-lg font-bold text-gray-900 text-center">{tableName}</h3>
+
+                      {/* Hidden canvas for PNG export */}
+                      <div style={{ position: "absolute", left: -9999, top: -9999 }}>
+                        <QRCodeCanvas
+                          value={qrUrl}
+                          size={256}
+                          level="H"
+                          includeMargin
+                          ref={(el: any) => {
+                            canvasRefs.current[table._id] = el
+                          }}
+                        />
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col h-full w-full">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex flex-col">
-                          <span className="text-xl font-bold">{table.name || `Table ${table.tableNumber}`}</span>
-                          <span className="text-xs font-semibold uppercase">{table.status}</span>
-                        </div>
-                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs bg-white/50" onClick={() => {
-                          setEditingTable(table._id)
-                          setEditingTableName(table.name || `Table ${table.tableNumber}`)
-                        }}>Edit</Button>
+
+                      {/* Visible SVG */}
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <QRCodeSVG value={qrUrl} size={160} level="H" includeMargin />
                       </div>
-                      
-                      {table.status === 'OCCUPIED' && order && (
-                        <div className="flex flex-col flex-1">
-                          <div className="bg-white/60 p-2 rounded-md mb-3 flex-1">
-                            <p className="text-xs font-bold text-gray-500 mb-1 border-b pb-1">Current Order</p>
-                            <ul className="text-sm space-y-1">
-                              {(order.items || []).map((item: any, i: number) => {
-                                const itemName = item.dishName || item.dish?.name || item.name || 'Item';
-                                const lineTotal = item.lineTotal !== undefined ? item.lineTotal : (item.price * item.quantity);
-                                return (
-                                  <li key={i} className="flex justify-between">
-                                    <span className="truncate pr-2">{item.quantity}x {itemName}</span>
-                                    <span className="font-medium text-primary">₹{lineTotal}</span>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                            <div className="flex justify-between font-bold text-sm mt-2 pt-1 border-t">
-                              <span>Total</span>
-                              <span className="text-primary">₹{order.total}</span>
-                            </div>
-                          </div>
-                          <Button 
-                            className="w-full mt-auto" 
-                            size="sm" 
-                            onClick={() => handleGenerateBill(table._id)}
-                          >
-                            Generate Bill
-                          </Button>
-                        </div>
-                      )}
+
+                      <p className="text-xs text-gray-400 text-center">
+                        📱 Scan to order from this table
+                      </p>
+
+                      <div className="flex gap-2 w-full">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 gap-1 text-xs"
+                          onClick={() => handleDownload(table)}
+                        >
+                          <Download className="w-3 h-3" />
+                          Save PNG
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1 gap-1 text-xs bg-orange-500 hover:bg-orange-600"
+                          onClick={() => handlePrintSingle(table)}
+                        >
+                          <Printer className="w-3 h-3" />
+                          Print
+                        </Button>
+                      </div>
+
+                      <p className="text-[9px] text-gray-300 break-all text-center leading-tight">
+                        {qrUrl}
+                      </p>
                     </div>
-                  )}
-                </div>
-              )})}
-              {tables.length === 0 && <div className="col-span-full text-center text-gray-500 py-4">No tables configured. Update the count above to create tables.</div>}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : !settingsLoading && !isTableQrEnabled ? (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
+          <QrCode className="w-16 h-16 text-gray-200" />
+          <p className="font-semibold text-gray-600 text-lg">QR Ordering is Disabled</p>
+          <p className="text-sm text-gray-400 max-w-sm text-center">
+            Enable the toggle above to generate unique QR codes for each of your tables.
+          </p>
+        </div>
+      ) : null}
     </div>
   )
 }
