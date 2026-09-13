@@ -26,7 +26,7 @@ const PublicKds = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await api.get(`/public/kds/${slug}/orders`);
+      const res = await axios.get(`${API_URL}/public/kds/${slug}/orders`);
       setOrders(res.data.data);
     } catch (err) {
       // toast({ title: 'Error fetching orders', variant: 'destructive' });
@@ -43,7 +43,7 @@ const PublicKds = () => {
 
   const updateStatus = async (orderId: string, status: string) => {
     try {
-      await api.patch(`/public/kds/${slug}/orders/${orderId}/status`, { status });
+      await axios.patch(`${API_URL}/public/kds/${slug}/orders/${orderId}/status`, { status });
       toast({ title: `Order status updated to ${status}` });
       fetchOrders();
     } catch (err: any) {
