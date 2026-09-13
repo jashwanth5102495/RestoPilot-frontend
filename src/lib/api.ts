@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as Sentry from '@sentry/react';
 
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (typeof window !== 'undefined' && window.location.hostname) {
     const host = window.location.hostname;

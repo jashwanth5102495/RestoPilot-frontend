@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { api } from '../lib/api';
+import axios from 'axios';
+import { api, getApiBaseUrl } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { Loader2, RefreshCw } from 'lucide-react';
+
+const API_URL = getApiBaseUrl();
 
 const PublicKds = () => {
   const { slug } = useParams();

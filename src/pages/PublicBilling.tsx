@@ -960,6 +960,23 @@ export default function PublicBilling() {
                     </div>
                   ))
                 )
+              ) : activeTab === 'QR_TABLES' ? (
+                !selectedQrOrder ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 min-h-[200px]">
+                    <QrCode className="w-12 h-12 mb-4 text-gray-200" />
+                    <p>Please select a QR table order to view details.</p>
+                  </div>
+                ) : (
+                  selectedQrOrder.items?.map((item: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <h4 className="font-medium text-sm text-gray-900 truncate">{item.dishName}</h4>
+                        <p className="text-sm text-gray-500">₹{item.unitPrice} × {item.quantity}</p>
+                      </div>
+                      <span className="font-semibold text-sm">₹{Number(item.lineTotal).toFixed(2)}</span>
+                    </div>
+                  ))
+                )
               ) : (
                 /* Online tab items */
                 !selectedOnlineOrder ? (
@@ -987,7 +1004,9 @@ export default function PublicBilling() {
                   ? subtotal 
                   : activeTab === 'TABLES'
                     ? (selectedTable ? (getTableOrder(selectedTable._id)?.subtotal || 0) : 0)
-                    : (selectedOnlineOrder ? (selectedOnlineOrder.subtotal || 0) : 0);
+                    : activeTab === 'QR_TABLES'
+                      ? (selectedQrOrder ? (selectedQrOrder.subtotal || 0) : 0)
+                      : (selectedOnlineOrder ? (selectedOnlineOrder.subtotal || 0) : 0);
                 
                 const tableOrder = selectedTable ? getTableOrder(selectedTable._id) : null;
                 
@@ -995,25 +1014,33 @@ export default function PublicBilling() {
                   ? cgst
                   : activeTab === 'TABLES'
                     ? (tableOrder ? (tableOrder.cgst ?? (tableOrder.tax ? tableOrder.tax / 2 : (tableOrder.subtotal || 0) * 0.025)) : 0)
-                    : (selectedOnlineOrder ? (selectedOnlineOrder.cgst ?? (selectedOnlineOrder.tax ? selectedOnlineOrder.tax / 2 : (selectedOnlineOrder.subtotal || 0) * 0.025)) : 0);
+                    : activeTab === 'QR_TABLES'
+                      ? (selectedQrOrder ? (selectedQrOrder.cgst ?? (selectedQrOrder.tax ? selectedQrOrder.tax / 2 : (selectedQrOrder.subtotal || 0) * 0.025)) : 0)
+                      : (selectedOnlineOrder ? (selectedOnlineOrder.cgst ?? (selectedOnlineOrder.tax ? selectedOnlineOrder.tax / 2 : (selectedOnlineOrder.subtotal || 0) * 0.025)) : 0);
                 
                 const currentSgst = activeTab === 'FAST_BILLING'
                   ? sgst
                   : activeTab === 'TABLES'
                     ? (tableOrder ? (tableOrder.sgst ?? (tableOrder.tax ? tableOrder.tax / 2 : (tableOrder.subtotal || 0) * 0.025)) : 0)
-                    : (selectedOnlineOrder ? (selectedOnlineOrder.sgst ?? (selectedOnlineOrder.tax ? selectedOnlineOrder.tax / 2 : (selectedOnlineOrder.subtotal || 0) * 0.025)) : 0);
+                    : activeTab === 'QR_TABLES'
+                      ? (selectedQrOrder ? (selectedQrOrder.sgst ?? (selectedQrOrder.tax ? selectedQrOrder.tax / 2 : (selectedQrOrder.subtotal || 0) * 0.025)) : 0)
+                      : (selectedOnlineOrder ? (selectedOnlineOrder.sgst ?? (selectedOnlineOrder.tax ? selectedOnlineOrder.tax / 2 : (selectedOnlineOrder.subtotal || 0) * 0.025)) : 0);
                 
                 const currentTax = activeTab === 'FAST_BILLING'
                   ? tax
                   : activeTab === 'TABLES'
                     ? (tableOrder ? (tableOrder.tax ?? (currentCgst + currentSgst)) : 0)
-                    : (selectedOnlineOrder ? (selectedOnlineOrder.tax ?? (currentCgst + currentSgst)) : 0);
+                    : activeTab === 'QR_TABLES'
+                      ? (selectedQrOrder ? (selectedQrOrder.tax ?? (currentCgst + currentSgst)) : 0)
+                      : (selectedOnlineOrder ? (selectedOnlineOrder.tax ?? (currentCgst + currentSgst)) : 0);
                 
                 const currentTotal = activeTab === 'FAST_BILLING'
                   ? total
                   : activeTab === 'TABLES'
                     ? (tableOrder ? (tableOrder.total || 0) : 0)
-                    : (selectedOnlineOrder ? (selectedOnlineOrder.total || 0) : 0);
+                    : activeTab === 'QR_TABLES'
+                      ? (selectedQrOrder ? (selectedQrOrder.total || 0) : 0)
+                      : (selectedOnlineOrder ? (selectedOnlineOrder.total || 0) : 0);
 
                 return (
                   <>
@@ -1077,6 +1104,26 @@ export default function PublicBilling() {
                   <Button className="w-full font-semibold text-base shadow-md" onClick={handleSettleTable} disabled={!selectedTable || isProcessing}>
                     {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Settle Table Bill'}
                   </Button>
+                ) : activeTab === 'QR_TABLES' ? (
+                  /* QR Table Actions */
+                  <div className="space-y-2">
+                    <Button 
+                      className="w-full font-semibold text-base shadow-md bg-orange-500 hover:bg-orange-600 text-white" 
+                      onClick={handleSettleQrOrder} 
+                      disabled={!selectedQrOrder || isProcessing || selectedQrOrder.orderStatus === 'COMPLETED'}
+                    >
+                      {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Settle & Print Bill'}
+                    </Button>
+                    {selectedQrOrder && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full gap-2 text-gray-700" 
+                        onClick={() => printReceipt(selectedQrOrder, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)}
+                      >
+                        <Printer className="w-4 h-4" /> Print Bill
+                      </Button>
+                    )}
+                  </div>
                 ) : (
                   /* Online Actions */
                   <div className="space-y-2">
