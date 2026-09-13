@@ -63,6 +63,12 @@ const FEATURE_LIST: FeatureItem[] = [
     icon: Globe
   },
   {
+    key: 'isTableQrEnabled',
+    label: 'Table QR Ordering',
+    description: 'Customer specific table QR codes for direct-to-kitchen ordering.',
+    icon: PackageSearch
+  },
+  {
     key: 'isInventoryEnabled',
     label: 'Inventory Management',
     description: 'Stock tracking, low-stock warnings, purchase entries, and deduction.',

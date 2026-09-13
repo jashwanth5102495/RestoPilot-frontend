@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Link2, Copy, ExternalLink, RefreshCw } from "lucide-react"
 import { printReceipt } from "@/lib/printReceipt"
+import { QRCodeSVG } from "qrcode.react"
+import { QrCode, Printer } from "lucide-react"
 
 export default function Tables() {
   const { toast } = useToast()
@@ -22,6 +24,8 @@ export default function Tables() {
   // Waiter URL states
   const [isWaiterEnabled, setIsWaiterEnabled] = useState(false)
   const [waiterSlug, setWaiterSlug] = useState('')
+  const [isTableQrEnabled, setIsTableQrEnabled] = useState(false)
+  const [tableQrSlug, setTableQrSlug] = useState('')
   const [settingsLoading, setSettingsLoading] = useState(true)
 
   const publicUrl = waiterSlug ? `${window.location.origin}/waiter-pos/${waiterSlug}` : ''
@@ -53,7 +57,9 @@ export default function Tables() {
       const restaurant = res.data?.data?.user?.restaurant
       if (restaurant) {
         setIsWaiterEnabled(restaurant.isWaiterOrderingEnabled || false)
+        setIsTableQrEnabled(restaurant.isTableQrEnabled || false)
         setWaiterSlug(restaurant.waiterSlug || '')
+        setTableQrSlug(restaurant.tableQrSlug || '')
       }
     } catch (error) {
       console.error(error)
@@ -111,6 +117,34 @@ export default function Tables() {
       toast({ 
         title: 'Error', 
         description: error.response?.data?.message || 'Failed to update waiter settings', 
+        variant: 'destructive' 
+      })
+    }
+  }
+
+  
+  const handleQrToggle = async (checked) => {
+    try {
+      const res = await api.post('/public/settings/table-qr', { enabled: checked })
+      setIsTableQrEnabled(res.data.data.isTableQrEnabled)
+      setTableQrSlug(res.data.data.tableQrSlug || '')
+      
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (user.restaurant) {
+        user.restaurant.isTableQrEnabled = res.data.data.isTableQrEnabled
+        user.restaurant.tableQrSlug = res.data.data.tableQrSlug
+        localStorage.setItem('user', JSON.stringify(user))
+      }
+
+      toast({
+        title: checked ? "Table QR Ordering Enabled" : "Table QR Ordering Disabled",
+        description: checked ? "Customers can now scan QR codes." : "QR ordering is now inactive.",
+      })
+    } catch (error) {
+      console.error(error)
+      toast({ 
+        title: 'Error', 
+        description: error?.response?.data?.message || 'Failed to update QR settings', 
         variant: 'destructive' 
       })
     }

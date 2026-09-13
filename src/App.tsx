@@ -17,6 +17,7 @@ import Billing from './pages/Billing'
 import Orders from './pages/Orders'
 import OnlineOrders from './pages/OnlineOrders'
 import CustomerOrder from './pages/CustomerOrder'
+import CustomerTableOrder from './pages/CustomerTableOrder'
 import Menu from './pages/Menu'
 import Tables from './pages/Tables'
 import PublicWaiter from './pages/PublicWaiter'
@@ -56,6 +57,7 @@ function App() {
         </Route>
         
         <Route path="/order/:slug" element={<CustomerOrder />} />
+        <Route path="/table/:slug/:tableId" element={<CustomerTableOrder />} />
         <Route path="/waiter/:slug" element={<PublicWaiter />} />
         <Route path="/waiter-pos/:slug" element={<PublicWaiter />} />
         <Route path="/:slug-waiter-:id" element={<PublicWaiter />} />
