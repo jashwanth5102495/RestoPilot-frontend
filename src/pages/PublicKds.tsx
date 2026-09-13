@@ -88,18 +88,29 @@ const PublicKds = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {orders.map(order => {
             const isOnline = order.orderSource === 'ONLINE';
+            const isTableQr = order.orderSource === 'TABLE_QR';
+            const tableInfo = order.tableId
+              ? (order.tableId.name || `Table ${order.tableId.tableNumber}`)
+              : null;
             return (
             <Card key={order._id} className={order.orderStatus === 'PREPARING' ? 'border-orange-500 shadow-md ring-1 ring-orange-500' : 'border-gray-200 shadow-sm'}>
               <CardHeader className="flex flex-row items-center justify-between bg-white border-b px-4 py-3">
                 <div>
                   <CardTitle className="text-base font-bold text-gray-800">
-                    {order.tableId ? `Table: ${order.tableId.name || 'Unknown'}` : `Order #${order.orderNumber}`}
+                    {tableInfo ? tableInfo : `Order #${order.orderNumber}`}
                   </CardTitle>
-                  {isOnline && (
-                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">
-                      ONLINE ORDER
-                    </span>
-                  )}
+                  <div className="flex gap-1 mt-0.5 flex-wrap">
+                    {isOnline && (
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">
+                        ONLINE ORDER
+                      </span>
+                    )}
+                    {isTableQr && (
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">
+                        📱 QR ORDER
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   order.orderStatus === 'PREPARING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
