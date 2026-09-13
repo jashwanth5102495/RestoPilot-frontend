@@ -72,7 +72,7 @@ const PublicWaiter = () => {
       setCategories(['All', ...uniqueCats]);
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || 'Failed to load Waiter Portal');
+      setError(err.response?.data?.message || err.message || 'Failed to load Waiter Portal');
     } finally {
       setPageLoading(false);
     }

@@ -92,7 +92,7 @@ export default function PublicBilling() {
         await fetchOnlineOrders(true)
       } catch (err: any) {
         console.error('Error fetching billing data:', err)
-        setError(err.response?.data?.message || 'Failed to load Billing Portal')
+        setError(err.response?.data?.message || err.message || 'Failed to load Billing Portal')
       } finally {
         setLoading(false)
       }
