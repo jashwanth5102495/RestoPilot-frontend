@@ -38,6 +38,7 @@ const mainNav: NavItem[] = [
 const managementNav: NavItem[] = [
   { name: 'Menu', to: '/menu', icon: MenuSquare },
   { name: 'Tables', to: '/tables', icon: LayoutTemplate, featureKey: 'isTablesEnabled' },
+  { name: 'Table QR', to: '/table-qr', icon: QrCode, featureKey: 'isTableQrEnabled' },
   { name: 'Recipes', to: '/recipes', icon: ChefHat, featureKey: 'isRecipesEnabled' },
   { name: 'Inventory', to: '/inventory', icon: Package, featureKey: 'isInventoryEnabled' },
   { name: 'Branches', to: '/branches', icon: GitBranch, featureKey: 'isBranchesEnabled' },

@@ -20,6 +20,7 @@ import CustomerOrder from './pages/CustomerOrder'
 import CustomerTableOrder from './pages/CustomerTableOrder'
 import Menu from './pages/Menu'
 import Tables from './pages/Tables'
+import TableQr from './pages/TableQr'
 import PublicWaiter from './pages/PublicWaiter'
 import PublicBilling from './pages/PublicBilling'
 import PublicKds from './pages/PublicKds'
@@ -75,6 +76,7 @@ function App() {
           <Route path="/online-orders" element={<OnlineOrders />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/tables" element={<Tables />} />
+            <Route path="/table-qr" element={<TableQr />} />
           <Route path="/recipes" element={<Recipes />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/inventory/check" element={<InventoryCheck />} />
