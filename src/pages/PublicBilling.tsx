@@ -74,6 +74,11 @@ export default function PublicBilling() {
           description: `You have incoming online order(s). Check the Online tab.`,
         })
       }
+      prevPendingCountRef.current = pendingCount
+    } catch (err) {
+      console.error('Failed to fetch online orders', err)
+    }
+  }
 
   const fetchQrTableOrders = async (silent = false) => {
     try {
@@ -91,11 +96,6 @@ export default function PublicBilling() {
       prevQrPendingCountRef.current = pendingCount
     } catch (err) {
       console.error('Failed to fetch QR table orders', err)
-    }
-  }
-      prevPendingCountRef.current = pendingCount
-    } catch (err) {
-      console.error('Failed to fetch online orders', err)
     }
   }
 
