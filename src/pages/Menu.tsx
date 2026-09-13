@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +39,7 @@ export default function Menu() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editDishId, setEditDishId] = useState<string | null>(null)
   const [selectedDishForPanel, setSelectedDishForPanel] = useState<any | null>(null)
