@@ -21,8 +21,10 @@ export default function TableQr() {
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
 
-  const getTableQrUrl = (tableId: string) =>
-    tableQrSlug ? `${baseUrl}/table/${tableQrSlug}/${tableId}` : ""
+  const getTableQrUrl = (tableId: string) => {
+    const slug = tableQrSlug || "restaurant"
+    return `${baseUrl}/table/${slug}/${tableId}` 
+  }
 
   const fetchTables = async () => {
     setTableLoading(true)
@@ -42,7 +44,8 @@ export default function TableQr() {
       const restaurant = res.data?.data?.user?.restaurant
       if (restaurant) {
         setIsTableQrEnabled(restaurant.isTableQrEnabled || false)
-        setTableQrSlug(restaurant.tableQrSlug || "")
+        const slug = restaurant.tableQrSlug || restaurant.waiterSlug || restaurant.billingSlug || restaurant.onlineSlug || restaurant._id || ""
+        setTableQrSlug(slug)
         setRestaurantName(restaurant.name || "Restaurant")
       }
     } catch (err) {
@@ -61,7 +64,8 @@ export default function TableQr() {
     try {
       const res = await api.post("/public/settings/table-qr", { enabled: checked })
       setIsTableQrEnabled(res.data.data.isTableQrEnabled)
-      setTableQrSlug(res.data.data.tableQrSlug || "")
+      const slug = res.data.data.tableQrSlug || tableQrSlug || res.data.data.waiterSlug || res.data.data.billingSlug || res.data.data._id || ""
+      setTableQrSlug(slug)
 
       const user = JSON.parse(localStorage.getItem("user") || "{}")
       if (user.restaurant) {
@@ -223,7 +227,7 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:10px 0}
       </Card>
 
       {/* QR Grid */}
-      {isTableQrEnabled && tableQrSlug ? (
+      {isTableQrEnabled ? (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-3">
