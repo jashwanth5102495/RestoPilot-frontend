@@ -1,5 +1,4 @@
-import axios from 'axios';
-import * as Sentry from '@sentry/react';
+import axios, { AxiosError } from 'axios';
 
 export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
@@ -13,8 +12,10 @@ export const getApiBaseUrl = () => {
 
 const API_URL = getApiBaseUrl();
 
+// Resilient API instance with 30s timeout for weak 2G/3G/4G/Wi-Fi signals
 export const api = axios.create({
   baseURL: API_URL,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -28,9 +29,33 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Automatic Network Retry with Exponential Backoff
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error: AxiosError) => {
+    const config = error.config as any;
+
+    // Detect network drops, weak signals, timeouts, or transient 5xx server issues
+    const isNetworkOrTimeout = !error.response && (
+      error.code === 'ERR_NETWORK' || 
+      error.code === 'ECONNABORTED' || 
+      error.message?.includes('Network Error') ||
+      error.message?.includes('timeout')
+    );
+
+    const isTransientServerErr = error.response && (error.response.status >= 502 && error.response.status <= 504);
+
+    if (config && (isNetworkOrTimeout || isTransientServerErr)) {
+      config._retryCount = config._retryCount || 0;
+
+      if (config._retryCount < 4) { // Retry up to 4 times silently in the background
+        config._retryCount += 1;
+        const delayMs = Math.min(1000 * Math.pow(2, config._retryCount), 8000); // 2s, 4s, 8s backoff
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        return api(config);
+      }
+    }
+
     // Handle unauthorized errors automatically
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('accessToken');
@@ -41,25 +66,9 @@ api.interceptors.response.use(
       if (window.location.pathname.startsWith('/admin')) {
         sessionStorage.removeItem('adminAuth');
         window.location.href = '/admin/login';
-      } else {
+      } else if (!window.location.pathname.includes('/public/') && !window.location.pathname.includes('/table/') && !window.location.pathname.includes('/order/') && !window.location.pathname.includes('/billing/') && !window.location.pathname.includes('/kds/')) {
         window.location.href = '/login';
       }
-    }
-    
-    // Capture unexpected API errors in Sentry
-    const status = error.response ? error.response.status : null;
-    if (!status || status >= 500) {
-      Sentry.withScope((scope) => {
-        if (error.response) {
-          scope.setExtra('responseBody', error.response.data);
-          scope.setExtra('statusCode', error.response.status);
-        }
-        scope.setExtra('requestUrl', error.config?.url);
-        scope.setExtra('requestMethod', error.config?.method);
-        // Do not log request headers (might contain token) or request body (might contain PII) unless sanitized
-        
-        Sentry.captureException(error);
-      });
     }
 
     return Promise.reject(error);

@@ -19,20 +19,20 @@ const PublicKds = () => {
   useEffect(() => {
     fetchOrders();
 
-    // Use polling for public KDS since we might not have a socket connection without auth
+    // Polling every 6s for public KDS with resilient retries
     const interval = setInterval(() => {
       fetchOrders();
-    }, 10000); // 10 seconds polling
+    }, 6000);
 
     return () => clearInterval(interval);
   }, [slug]);
 
   const fetchOrders = async () => {
     try {
-      const res = await axios.get(`${API_URL}/public/kds/${slug}/orders`);
-      setOrders(res.data.data);
+      const res = await api.get(`/public/kds/${slug}/orders`);
+      setOrders(res.data.data || []);
     } catch (err) {
-      // toast({ title: 'Error fetching orders', variant: 'destructive' });
+      // Silently retry on weak network
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -46,11 +46,11 @@ const PublicKds = () => {
 
   const updateStatus = async (orderId: string, status: string) => {
     try {
-      await axios.patch(`${API_URL}/public/kds/${slug}/orders/${orderId}/status`, { status });
-      toast({ title: `Order status updated to ${status}` });
+      await api.patch(`/public/kds/${slug}/orders/${orderId}/status`, { status });
+      toast({ title: 'Order status updated' });
       fetchOrders();
-    } catch (err: any) {
-      toast({ title: 'Error updating status', description: err.response?.data?.message, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Failed to update order', variant: 'destructive' });
     }
   };
 

@@ -1,24 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast';
 import { printReceipt } from '../lib/printReceipt';
 import { Loader2, RefreshCw, ArrowLeft, ShoppingCart, Receipt, Search, Minus, Plus } from 'lucide-react';
-
-const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && window.location.hostname) {
-    const host = window.location.hostname;
-    const protocol = window.location.protocol;
-    return `${protocol}//${host}:5000/api/v1`;
-  }
-  return 'http://localhost:5000/api/v1';
-};
-
-const API_URL = getApiBaseUrl();
 
 const PublicWaiter = () => {
   const params = useParams<{ slug?: string }>();
@@ -52,8 +40,8 @@ const PublicWaiter = () => {
     setPageLoading(true);
     try {
       const [tablesRes, menuRes] = await Promise.all([
-        axios.get(`${API_URL}/public/waiter/${slug}/tables`),
-        axios.get(`${API_URL}/public/waiter/${slug}/menu`)
+        api.get(`/public/waiter/${slug}/tables`),
+        api.get(`/public/waiter/${slug}/menu`)
       ]);
       
       const rest = tablesRes.data.data.restaurant || menuRes.data.data.restaurant;
@@ -80,17 +68,17 @@ const PublicWaiter = () => {
 
   const fetchTables = async () => {
     try {
-      const tablesRes = await axios.get(`${API_URL}/public/waiter/${slug}/tables`);
+      const tablesRes = await api.get(`/public/waiter/${slug}/tables`);
       setTables(tablesRes.data.data.tables || []);
     } catch (err) {
       console.error(err);
     }
   };
 
-  const refreshOrder = async () => {
-    if (!activeTable || activeTable.status !== 'OCCUPIED') return;
+  const refreshActiveTableOrder = async () => {
+    if (!activeTable) return;
     try {
-      const res = await axios.get(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/order`);
+      const res = await api.get(`/public/waiter/${slug}/tables/${activeTable._id}/order`);
       setExistingOrder(res.data.data || null);
       toast({ title: 'Order refreshed' });
     } catch (err) {
@@ -105,7 +93,7 @@ const PublicWaiter = () => {
     
     if (table.status === 'OCCUPIED') {
       try {
-        const res = await axios.get(`${API_URL}/public/waiter/${slug}/tables/${table._id}/order`);
+        const res = await api.get(`/public/waiter/${slug}/tables/${table._id}/order`);
         setExistingOrder(res.data.data || null);
       } catch (err) {
         console.error('Failed to fetch existing order', err);
@@ -143,14 +131,14 @@ const PublicWaiter = () => {
         quantityChange: item.quantity,
         notes: item.notes
       }));
-      await axios.post(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/order`, { items });
+      await api.post(`/public/waiter/${slug}/tables/${activeTable._id}/order`, { items });
       toast({ title: 'Order sent to Kitchen!' });
       setCart([]);
       fetchTables();
       
       // Refresh the existing order so the waiter sees the updated state without closing the table
       try {
-        const res = await axios.get(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/order`);
+        const res = await api.get(`/public/waiter/${slug}/tables/${activeTable._id}/order`);
         setExistingOrder(res.data.data || null);
       } catch (e) {}
       
@@ -165,7 +153,7 @@ const PublicWaiter = () => {
     if (!activeTable) return;
     setBillLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/public/waiter/${slug}/tables/${activeTable._id}/bill`);
+      const res = await api.post(`/public/waiter/${slug}/tables/${activeTable._id}/bill`);
       toast({ title: 'Bill Generated!' });
       
       if (res.data?.data) {

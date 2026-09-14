@@ -51,6 +51,7 @@ const analyticsNav: NavItem[] = [
 ]
 
 const systemNav: NavItem[] = [
+  { name: 'Data', to: '/data', icon: Database },
   { name: 'Settings', to: '/settings', icon: Settings },
   { name: 'Subscription', to: '/subscription', icon: CreditCard },
   { name: 'Data Archive', to: '/archive', icon: Database },

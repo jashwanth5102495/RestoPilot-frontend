@@ -12,6 +12,7 @@ import AdminAgents from './pages/admin/AdminAgents'
 import AdminNotifications from './pages/admin/AdminNotifications'
 import AdminLogin from './pages/admin/AdminLogin'
 import { Toaster } from './components/ui/toaster'
+import { NetworkStatusNotifier } from './components/ui/NetworkStatusNotifier'
 
 import Billing from './pages/Billing'
 import Orders from './pages/Orders'
@@ -37,8 +38,8 @@ import Branches from './pages/Branches'
 import Recipes from './pages/Recipes'
 import Subscription from './pages/Subscription'
 import DataArchive from './pages/DataArchive'
+import Data from './pages/Data'
 import Notifications from './pages/Notifications'
-
 
 function App() {
   return (
@@ -76,7 +77,7 @@ function App() {
           <Route path="/online-orders" element={<OnlineOrders />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/tables" element={<Tables />} />
-            <Route path="/table-qr" element={<TableQr />} />
+          <Route path="/table-qr" element={<TableQr />} />
           <Route path="/recipes" element={<Recipes />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/inventory/check" element={<InventoryCheck />} />
@@ -87,11 +88,13 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/subscription" element={<Subscription />} />
+          <Route path="/data" element={<Data />} />
           <Route path="/archive" element={<DataArchive />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
       </Routes>
       <Toaster />
+      <NetworkStatusNotifier />
     </BrowserRouter>
   )
 }

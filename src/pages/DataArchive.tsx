@@ -60,8 +60,7 @@ export default function DataArchive() {
           <CardHeader>
             <CardTitle>Request Historical Data</CardTitle>
             <CardDescription>
-              We delete data older than 1 month to stay within our free tier. 
-              You can request an archived copy for ₹50 per month.
+              Data is never deleted automatically. Super Admin can manually manage and archive historical sales data upon request.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -1,16 +1,10 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import axios from 'axios'
+import { api } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ShoppingBag, Minus, Plus, Utensils, AlertTriangle, ChevronRight, ChevronsRight, Check, Sparkles, X, RefreshCw } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-
-const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
-  return `${window.location.protocol}//${window.location.hostname}:5000/api/v1`
-}
-const API_URL = getApiBaseUrl()
 
 // ── Slide to Confirm Slider Component ──────────────────────────────────────
 function SlideToConfirm({ onConfirm, disabled, label = "Slide to Place Order" }: { onConfirm: () => void; disabled?: boolean; label?: string }) {
@@ -92,27 +86,32 @@ export default function CustomerTableOrder() {
   const [dishes, setDishes] = useState<any[]>([])
 
   const [cart, setCart] = useState<any[]>([])
-  const [activeCategory, setActiveCategory] = useState('All')
-  const [isCartOpenMobile, setIsCartOpenMobile] = useState(false)
+  const [activeOrder, setActiveOrder] = useState<any>(null)
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [orderSuccess, setOrderSuccess] = useState(false)
+  const fetchMenu = async () => {
+    try {
+      const res = await api.get(`/public/table-qr/${slug}/tables/${tableId}/menu`)
+      setRestaurant(res.data.data.restaurant)
+      setTableInfo(res.data.data.table)
+      setCategories([{ _id: 'All', name: 'All' }, ...res.data.data.categories])
+      setDishes(res.data.data.dishes)
+      if (res.data.data.activeOrder) {
+        setActiveOrder(res.data.data.activeOrder)
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Restaurant menu not available.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchMenu = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/public/table-qr/${slug}/tables/${tableId}/menu`)
-        setRestaurant(res.data.data.restaurant)
-        setTableInfo(res.data.data.table)
-        setCategories([{ _id: 'All', name: 'All' }, ...res.data.data.categories])
-        setDishes(res.data.data.dishes)
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Restaurant menu not available.')
-      } finally {
-        setLoading(false)
-      }
+    if (slug && tableId) {
+      fetchMenu()
+      // Real-time polling every 6s to refresh active order status from kitchen/billing
+      const interval = setInterval(fetchMenu, 6000)
+      return () => clearInterval(interval)
     }
-    if (slug && tableId) fetchMenu()
   }, [slug, tableId])
 
   const addToCart = (dish: any) => {
@@ -151,7 +150,10 @@ export default function CustomerTableOrder() {
       const payload = {
         items: cart.map(c => ({ dishId: c.dish._id, quantity: c.quantity }))
       }
-      await axios.post(`${API_URL}/public/table-qr/${slug}/tables/${tableId}/order`, payload)
+      const res = await api.post(`/public/table-qr/${slug}/tables/${tableId}/order`, payload)
+      if (res.data.data) {
+        setActiveOrder(res.data.data)
+      }
       setOrderSuccess(true)
       setCart([])
       setIsCartOpenMobile(false)
@@ -192,15 +194,34 @@ export default function CustomerTableOrder() {
         <div className="w-24 h-24 bg-gradient-to-tr from-emerald-600 to-teal-400 text-white rounded-full flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20 animate-bounce">
           <Check className="w-12 h-12 stroke-[3]" />
         </div>
-        <h1 className="text-3xl font-extrabold text-white mb-2">Order Confirmed!</h1>
-        <p className="text-slate-300 max-w-md text-sm leading-relaxed mb-8">
-          Your order for <span className="text-orange-400 font-bold underline decoration-orange-400/50">{tableNameStr}</span> has been sent directly to the kitchen.
+        <h1 className="text-3xl font-extrabold text-white mb-2">Order Sent to Kitchen!</h1>
+        <p className="text-slate-300 max-w-md text-sm leading-relaxed mb-6">
+          Your dishes for <span className="text-orange-400 font-bold underline decoration-orange-400/50">{tableNameStr}</span> have been placed and added to your running table bill.
         </p>
+
+        {activeOrder && activeOrder.items && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 max-w-md w-full mb-6 text-left">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Dishes Ordered So Far</p>
+            <div className="space-y-1.5 divide-y divide-slate-800">
+              {activeOrder.items.map((item: any, i: number) => (
+                <div key={i} className="pt-1.5 flex justify-between text-xs text-slate-200 font-medium">
+                  <span>{item.dishName} × {item.quantity}</span>
+                  <span className="font-bold text-orange-400">₹{item.lineTotal}</span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-slate-800 mt-3 pt-2 flex justify-between text-sm font-extrabold text-white">
+              <span>Running Total (Incl Tax)</span>
+              <span className="text-orange-400">₹{activeOrder.total}</span>
+            </div>
+          </div>
+        )}
+
         <Button
-          onClick={() => setOrderSuccess(false)}
+          onClick={() => { setOrderSuccess(false); fetchMenu(); }}
           className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-6 rounded-full shadow-lg shadow-orange-500/25"
         >
-          Add More Items
+          Add More Dishes to Order
         </Button>
       </div>
     )
@@ -239,6 +260,40 @@ export default function CustomerTableOrder() {
 
         {/* ── Menu Content Area ──────────────────────────────────────────── */}
         <div className="max-w-4xl mx-auto w-full p-4 sm:p-6 space-y-6">
+
+          {/* Active Table Order History Banner */}
+          {activeOrder && activeOrder.items && activeOrder.items.length > 0 && (
+            <div className="bg-slate-900/90 border border-orange-500/40 rounded-2xl p-4 shadow-lg shadow-orange-500/5 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-orange-500/20 text-orange-400 rounded-lg flex items-center justify-center font-bold">
+                    <Utensils className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-white">Dishes Already Ordered</h3>
+                    <p className="text-[11px] text-slate-400">Your table's active running order until bill settlement</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                  {activeOrder.orderStatus || 'ACTIVE'}
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1 divide-y divide-slate-800/60">
+                {activeOrder.items.map((item: any, idx: number) => (
+                  <div key={idx} className="pt-2 first:pt-0 flex justify-between items-center text-xs">
+                    <span className="text-slate-200 font-semibold">{item.dishName} <span className="text-orange-400 font-bold ml-1">× {item.quantity}</span></span>
+                    <span className="font-extrabold text-orange-400">₹{Number(item.lineTotal).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-slate-800/90 pt-2.5 flex justify-between items-center text-xs font-bold">
+                <span className="text-slate-300">Running Total ({activeOrder.items.length} items + tax)</span>
+                <span className="text-base font-black text-orange-400">₹{Number(activeOrder.total).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
 
           {/* Category Chips */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
