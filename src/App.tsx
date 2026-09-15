@@ -25,6 +25,7 @@ import TableQr from './pages/TableQr'
 import PublicBilling from './pages/PublicBilling'
 import PublicKds from './pages/PublicKds'
 import PublicInventory from './pages/PublicInventory'
+import PublicWaiter from './pages/PublicWaiter'
 import Kitchen from './pages/Kitchen'
 import Inventory from './pages/Inventory'
 import InventoryCheck from './pages/InventoryCheck'
@@ -62,6 +63,7 @@ function App() {
         <Route path="/billing/:slug" element={<PublicBilling />} />
         <Route path="/kds/:slug" element={<PublicKds />} />
         <Route path="/public-inventory/:slug" element={<PublicInventory />} />
+        <Route path="/waiter-pos/:slug" element={<PublicWaiter />} />
         
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/login" replace />} />
