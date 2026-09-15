@@ -75,7 +75,7 @@ const PublicWaiter = () => {
     }
   };
 
-  const refreshActiveTableOrder = async () => {
+  const refreshOrder = async () => {
     if (!activeTable) return;
     try {
       const res = await api.get(`/public/waiter/${slug}/tables/${activeTable._id}/order`);
