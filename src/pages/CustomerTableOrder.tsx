@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { ShoppingBag, Minus, Plus, Utensils, AlertTriangle, ChevronRight, ChevronsRight, Check, Sparkles, X } from 'lucide-react'
+import { ShoppingBag, Minus, Plus, Utensils, AlertTriangle, ChevronRight, ChevronsRight, Check, Sparkles, X, Search } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 
 // ── Slide to Confirm Slider Component ──────────────────────────────────────
@@ -87,6 +87,7 @@ export default function CustomerTableOrder() {
   const [cart, setCart] = useState<any[]>([])
   const [activeOrder, setActiveOrder] = useState<any>(null)
   const [activeCategory, setActiveCategory] = useState('All')
+  const [searchQuery, setSearchQuery] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState(false)
   const [isCartOpenMobile, setIsCartOpenMobile] = useState(false)
@@ -230,7 +231,16 @@ export default function CustomerTableOrder() {
     )
   }
 
-  const filteredDishes = dishes.filter(d => activeCategory === 'All' || d.categoryId === activeCategory)
+  const filteredDishes = dishes.filter(d => {
+    const categoryId = typeof d.categoryId === 'object' ? d.categoryId?._id : d.categoryId
+    const matchesCategory = activeCategory === 'All' || String(categoryId) === String(activeCategory)
+    const query = searchQuery.trim().toLowerCase()
+    const matchesSearch = !query || [d.name, d.description]
+      .filter(Boolean)
+      .some(value => String(value).toLowerCase().includes(query))
+
+    return matchesCategory && matchesSearch
+  })
   const tableNameDisplay = tableInfo ? (tableInfo.name || `Table ${tableInfo.tableNumber}`) : 'Table'
 
   return (
@@ -297,6 +307,19 @@ export default function CustomerTableOrder() {
               </div>
             </div>
           )}
+
+          {/* Menu Search */}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search dishes..."
+              aria-label="Search dishes"
+              className="h-12 w-full rounded-xl border border-slate-800 bg-slate-900/80 pl-11 pr-4 text-sm font-medium text-slate-100 outline-none transition-colors placeholder:text-slate-500 focus:border-orange-500/70 focus:ring-2 focus:ring-orange-500/20"
+            />
+          </div>
 
           {/* Category Chips */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
@@ -370,6 +393,13 @@ export default function CustomerTableOrder() {
                 </div>
               )
             })}
+            {filteredDishes.length === 0 && (
+              <div className="sm:col-span-2 rounded-2xl border border-dashed border-slate-800 bg-slate-900/50 px-6 py-10 text-center">
+                <Search className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+                <p className="font-bold text-slate-300">No dishes found</p>
+                <p className="mt-1 text-xs text-slate-500">Try another dish name or category.</p>
+              </div>
+            )}
           </div>
 
         </div>
