@@ -1,19 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { api } from '../lib/api';
+import { api, getApiBaseUrl } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
-
-const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && window.location.hostname) {
-    const host = window.location.hostname;
-    const protocol = window.location.protocol;
-    return `${protocol}//${host}:5000/api/v1`;
-  }
-  return 'http://localhost:5000/api/v1';
-};
 
 const API_URL = getApiBaseUrl();
 

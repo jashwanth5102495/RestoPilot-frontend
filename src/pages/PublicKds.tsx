@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useToast } from '../hooks/use-toast';
 import { Loader2, RefreshCw } from 'lucide-react';
 
-const API_URL = getApiBaseUrl();
-
 const PublicKds = () => {
   const { slug } = useParams();
   const { toast } = useToast();
