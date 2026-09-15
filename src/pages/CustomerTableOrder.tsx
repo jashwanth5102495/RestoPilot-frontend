@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from "@/lib/api"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ShoppingBag, Minus, Plus, Utensils, AlertTriangle, ChevronRight, ChevronsRight, Check, Sparkles, X, RefreshCw } from 'lucide-react'
+import { ShoppingBag, Minus, Plus, Utensils, AlertTriangle, ChevronRight, ChevronsRight, Check, Sparkles, X } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 
 // ── Slide to Confirm Slider Component ──────────────────────────────────────
@@ -87,6 +86,10 @@ export default function CustomerTableOrder() {
 
   const [cart, setCart] = useState<any[]>([])
   const [activeOrder, setActiveOrder] = useState<any>(null)
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [orderSuccess, setOrderSuccess] = useState(false)
+  const [isCartOpenMobile, setIsCartOpenMobile] = useState(false)
 
   const fetchMenu = async () => {
     try {
