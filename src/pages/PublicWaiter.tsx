@@ -5,8 +5,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast';
-import { printReceipt } from '../lib/printReceipt';
-import { Loader2, RefreshCw, ArrowLeft, ShoppingCart, Receipt, Search, Minus, Plus } from 'lucide-react';
+import { Loader2, RefreshCw, ArrowLeft, ShoppingCart, Search, Minus, Plus } from 'lucide-react';
 
 const PublicWaiter = () => {
   const params = useParams<{ slug?: string }>();
@@ -14,9 +13,6 @@ const PublicWaiter = () => {
   const { toast } = useToast();
   
   const [restaurantName, setRestaurantName] = useState('');
-  const [restaurantAddress, setRestaurantAddress] = useState('');
-  const [restaurantPhone, setRestaurantPhone] = useState('');
-  const [restaurantGstin, setRestaurantGstin] = useState('');
   const [tables, setTables] = useState<any[]>([]);
   const [activeTable, setActiveTable] = useState<any | null>(null);
   
@@ -27,7 +23,6 @@ const PublicWaiter = () => {
   const [cart, setCart] = useState<any[]>([]);
   const [existingOrder, setExistingOrder] = useState<any | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
-  const [billLoading, setBillLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMobileCart, setShowMobileCart] = useState(false);
@@ -46,9 +41,6 @@ const PublicWaiter = () => {
       
       const rest = tablesRes.data.data.restaurant || menuRes.data.data.restaurant;
       setRestaurantName(rest?.name || 'MYSTERY FAMILY RESTAURANT');
-      setRestaurantAddress(rest?.address || 'NH47, Bulahalli Gate, Avathi, Devanahalli, Karnataka 562164');
-      setRestaurantPhone(rest?.phone || '+91 97433 99992');
-      setRestaurantGstin(rest?.gstNumber || '29BVXPN5021P1ZL');
       setTables(tablesRes.data.data.tables || []);
       
       const allDishes = menuRes.data.data.dishes || [];
@@ -149,27 +141,6 @@ const PublicWaiter = () => {
     }
   };
 
-  const generateBill = async () => {
-    if (!activeTable) return;
-    setBillLoading(true);
-    try {
-      const res = await api.post(`/public/waiter/${slug}/tables/${activeTable._id}/bill`);
-      toast({ title: 'Bill Generated!' });
-      
-      if (res.data?.data) {
-        printReceipt(res.data.data, restaurantName, restaurantAddress, restaurantPhone, restaurantGstin);
-      }
-      
-      setActiveTable(null);
-      setShowMobileCart(false);
-      fetchTables();
-    } catch (err: any) {
-      toast({ title: 'Failed to generate bill', description: err.response?.data?.message, variant: 'destructive' });
-    } finally {
-      setBillLoading(false);
-    }
-  };
-
   if (pageLoading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
   }
@@ -235,12 +206,6 @@ const PublicWaiter = () => {
                 {showMobileCart ? <ArrowLeft className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
                 {showMobileCart ? 'Back to Menu' : `Current Order (${cart.reduce((a, b) => a + b.quantity, 0)})`}
               </Button>
-              {activeTable.status === 'OCCUPIED' && (
-                <Button onClick={generateBill} disabled={billLoading} variant="secondary" className="gap-2 bg-orange-100 text-orange-700 hover:bg-orange-200 border-none">
-                  {billLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Receipt className="w-4 h-4" />}
-                  Generate Bill
-                </Button>
-              )}
               <Button onClick={() => setActiveTable(null)} variant="outline">Back to Tables</Button>
             </div>
           </div>
