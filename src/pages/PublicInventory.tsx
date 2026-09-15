@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import axios from 'axios'
+import { api } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,18 +15,6 @@ import {
 } from "@/components/ui/table"
 import { Search, Package, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-
-const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && window.location.hostname) {
-    const host = window.location.hostname;
-    const protocol = window.location.protocol;
-    return `${protocol}//${host}:5000/api/v1`;
-  }
-  return 'http://localhost:5000/api/v1';
-};
-
-const API_URL = getApiBaseUrl();
 
 export default function PublicInventory() {
   const { slug } = useParams()
@@ -44,7 +32,7 @@ export default function PublicInventory() {
 
   const fetchInventory = async () => {
     try {
-      const res = await axios.get(`${API_URL}/public/inventory/${slug}/ingredients`)
+      const res = await api.get(`/public/inventory/${slug}/ingredients`)
       setRestaurant(res.data.data.restaurant)
       setIngredients(res.data.data.ingredients || [])
     } catch (error: any) {
@@ -86,7 +74,7 @@ export default function PublicInventory() {
 
     setInlineSubmitting(item._id)
     try {
-      await axios.post(`${API_URL}/public/inventory/${slug}/restock`, {
+      await api.post(`/public/inventory/${slug}/restock`, {
         items: [{
           ingredientId: item._id,
           quantity: Number(qty),

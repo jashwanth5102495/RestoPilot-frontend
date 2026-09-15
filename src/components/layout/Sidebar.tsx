@@ -58,7 +58,6 @@ const systemNav: NavItem[] = [
 ]
 
 const staffNav: NavItem[] = [
-  { name: 'Waiter POS', to: '/waiter', icon: Utensils, featureKey: 'isWaiterOrderingEnabled' },
   { name: 'Kitchen Display', to: '/kitchen', icon: ChefHat, featureKey: 'isKdsEnabled' },
 ]
 
@@ -115,7 +114,6 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose
       <NavLink
         key={item.name}
         to={item.to}
-        target={item.to === '/waiter/login' ? "_blank" : undefined}
         className={({ isActive }) =>
           cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",

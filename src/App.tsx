@@ -22,7 +22,6 @@ import CustomerTableOrder from './pages/CustomerTableOrder'
 import Menu from './pages/Menu'
 import Tables from './pages/Tables'
 import TableQr from './pages/TableQr'
-import PublicWaiter from './pages/PublicWaiter'
 import PublicBilling from './pages/PublicBilling'
 import PublicKds from './pages/PublicKds'
 import PublicInventory from './pages/PublicInventory'
@@ -60,10 +59,6 @@ function App() {
         
         <Route path="/order/:slug" element={<CustomerOrder />} />
         <Route path="/table/:slug/:tableId" element={<CustomerTableOrder />} />
-        <Route path="/waiter/:slug" element={<PublicWaiter />} />
-        <Route path="/waiter-pos/:slug" element={<PublicWaiter />} />
-        <Route path="/:slug-waiter-:id" element={<PublicWaiter />} />
-        <Route path="/:slug-waiter" element={<PublicWaiter />} />
         <Route path="/billing/:slug" element={<PublicBilling />} />
         <Route path="/kds/:slug" element={<PublicKds />} />
         <Route path="/public-inventory/:slug" element={<PublicInventory />} />

@@ -51,7 +51,7 @@ export default function PublicBilling() {
 
   const fetchOnlineOrders = async (silent = false) => {
     try {
-      const res = await axios.get(`${API_URL}/public/billing/${slug}/online-orders`)
+      const res = await api.get(`/public/billing/${slug}/online-orders`)
       const orders = res.data.data || []
       setOnlineOrders(orders)
       
@@ -70,7 +70,7 @@ export default function PublicBilling() {
 
   const fetchQrTableOrders = async (silent = false) => {
     try {
-      const res = await axios.get(`${API_URL}/public/billing/${slug}/qr-table-orders`)
+      const res = await api.get(`/public/billing/${slug}/qr-table-orders`)
       const orders = res.data.data || []
       setQrTableOrders(orders)
       
@@ -90,13 +90,13 @@ export default function PublicBilling() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(`${API_URL}/public/billing/${slug}/menu`)
+        const res = await api.get(`/public/billing/${slug}/menu`)
         const data = res.data.data
         setRestaurantData(data.restaurant)
         setCategories([{ _id: 'All', name: 'All' }, ...data.categories])
         setDishes(data.dishes)
 
-        const tablesRes = await axios.get(`${API_URL}/public/billing/${slug}/tables`)
+        const tablesRes = await api.get(`/public/billing/${slug}/tables`)
         setTables(tablesRes.data.data.tables)
         setActiveOrders(tablesRes.data.data.activeOrders)
 
@@ -125,7 +125,7 @@ export default function PublicBilling() {
 
   const refreshTables = async () => {
     try {
-      const tablesRes = await axios.get(`${API_URL}/public/billing/${slug}/tables`)
+      const tablesRes = await api.get(`/public/billing/${slug}/tables`)
       setTables(tablesRes.data.data.tables)
       setActiveOrders(tablesRes.data.data.activeOrders)
     } catch (err) {
@@ -185,7 +185,7 @@ export default function PublicBilling() {
         customerId: null // Currently unauthenticated
       }
 
-      const response = await axios.post(`${API_URL}/public/billing/${slug}/sale`, payload)
+      const response = await api.post(`/public/billing/${slug}/sale`, payload)
 
       const billNumber = response.data.data.bill.billNumber
       toast({
@@ -213,7 +213,7 @@ export default function PublicBilling() {
     if (!selectedTable) return
     setIsProcessing(true)
     try {
-      const res = await axios.post(`${API_URL}/public/billing/${slug}/tables/${selectedTable._id}/settle`, {
+      const res = await api.post(`/public/billing/${slug}/tables/${selectedTable._id}/settle`, {
         paymentMethod
       })
       toast({
@@ -259,7 +259,7 @@ export default function PublicBilling() {
     if (!selectedOnlineOrder) return
     setIsProcessing(true)
     try {
-      const res = await axios.post(`${API_URL}/public/billing/${slug}/online-orders/${selectedOnlineOrder._id}/settle`, {
+      const res = await api.post(`/public/billing/${slug}/online-orders/${selectedOnlineOrder._id}/settle`, {
         paymentMethod
       })
       toast({
@@ -284,7 +284,7 @@ export default function PublicBilling() {
     if (!selectedQrOrder) return
     setIsProcessing(true)
     try {
-      const res = await axios.post(`${API_URL}/public/billing/${slug}/qr-table-orders/${selectedQrOrder._id}/settle`, { paymentMethod })
+      const res = await api.post(`/public/billing/${slug}/qr-table-orders/${selectedQrOrder._id}/settle`, { paymentMethod })
       toast({ title: "QR Table Order Settled", description: "Order completed and bill printed." })
       printReceipt(res.data.data, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
       setSelectedQrOrder(res.data.data)
@@ -298,7 +298,7 @@ export default function PublicBilling() {
     if (!selectedOnlineOrder) return
     setIsProcessing(true)
     try {
-      const res = await axios.patch(`${API_URL}/public/billing/${slug}/online-orders/${selectedOnlineOrder._id}/status`, {
+      const res = await api.patch(`/public/billing/${slug}/online-orders/${selectedOnlineOrder._id}/status`, {
         status
       })
       toast({
@@ -543,7 +543,7 @@ export default function PublicBilling() {
                             const toggleAvailability = async () => {
                               try {
                                 const newStatus = !dish.isAvailable;
-                                await axios.patch(`${API_URL}/public/billing/${slug}/dishes/${dish._id}/availability`, { isAvailable: newStatus });
+                                await api.patch(`/public/billing/${slug}/dishes/${dish._id}/availability`, { isAvailable: newStatus });
                                 setDishes(prev => prev.map(d => d._id === dish._id ? { ...d, isAvailable: newStatus } : d));
                                 toast({ title: newStatus ? 'Dish is now available' : 'Dish marked as out of stock' });
                               } catch (err) {

@@ -56,8 +56,8 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />
   }
 
-  if (user.role === 'WAITER' && location.pathname !== '/waiter') {
-    return <Navigate to="/waiter" replace />
+  if (user.role === 'WAITER' && location.pathname !== '/billing') {
+    return <Navigate to="/billing" replace />
   }
 
   if (user.role === 'KITCHEN' && location.pathname !== '/kitchen') {
