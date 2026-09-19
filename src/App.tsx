@@ -11,6 +11,7 @@ import AdminDataRequests from './pages/admin/AdminDataRequests'
 import AdminAgents from './pages/admin/AdminAgents'
 import AdminNotifications from './pages/admin/AdminNotifications'
 import AdminLogin from './pages/admin/AdminLogin'
+import AdminSubscriptionPricing from './pages/admin/AdminSubscriptionPricing'
 import { Toaster } from './components/ui/toaster'
 import { NetworkStatusNotifier } from './components/ui/NetworkStatusNotifier'
 
@@ -56,6 +57,7 @@ function App() {
           <Route path="requests" element={<AdminDataRequests />} />
           <Route path="agents" element={<AdminAgents />} />
           <Route path="notifications" element={<AdminNotifications />} />
+          <Route path="subscription-pricing" element={<AdminSubscriptionPricing />} />
         </Route>
         
         <Route path="/order/:slug" element={<CustomerOrder />} />
