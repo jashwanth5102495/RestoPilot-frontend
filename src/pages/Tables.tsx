@@ -71,6 +71,8 @@ export default function Tables() {
   useEffect(() => {
     fetchTablesAndOrders()
     fetchSettings()
+    const interval = setInterval(fetchTablesAndOrders, 5000)
+    return () => clearInterval(interval)
   }, [])
 
   const handleUpdateTableCount = async () => {
@@ -172,12 +174,45 @@ export default function Tables() {
     }
   }
 
+  const handleApproveBillRequest = async (order: any) => {
+    try {
+      const res = await api.post(`/orders/${order._id}/approve-bill`)
+      toast({ title: 'Bill generated', description: `Payment mode: ${order.billRequestedPaymentMethod}` })
+      if (res.data?.data) printReceipt(res.data.data)
+      fetchTablesAndOrders()
+    } catch (err: any) {
+      toast({ title: 'Error generating bill', description: err.response?.data?.message || 'Please try again.', variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tables</h1>
         <p className="text-gray-500">Manage your restaurant layout and Waiter ordering portal.</p>
       </div>
+
+      {activeOrders.some(order => order.billRequestStatus === 'REQUESTED') && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardHeader>
+            <CardTitle className="text-amber-900">Pending waiter bill requests</CardTitle>
+            <CardDescription>Review the payment mode, then generate and print the final bill.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {activeOrders.filter(order => order.billRequestStatus === 'REQUESTED').map(order => (
+              <div key={order._id} className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold">{order.tableId?.name || `Table ${order.tableId?.tableNumber || ''}`}</p>
+                  <p className="text-sm text-gray-600">Payment mode: <strong>{order.billRequestedPaymentMethod}</strong> · Total: ₹{Number(order.total || 0).toFixed(2)}</p>
+                </div>
+                <Button onClick={() => handleApproveBillRequest(order)} className="gap-2">
+                  <Printer className="h-4 w-4" /> Generate & Print Bill
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

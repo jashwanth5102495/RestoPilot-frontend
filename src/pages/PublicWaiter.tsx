@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast';
 import { Loader2, RefreshCw, ArrowLeft, ShoppingCart, Search, Minus, Plus } from 'lucide-react';
@@ -26,6 +26,8 @@ const PublicWaiter = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMobileCart, setShowMobileCart] = useState(false);
+  const [showBillDialog, setShowBillDialog] = useState(false);
+  const [billLoading, setBillLoading] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -138,6 +140,22 @@ const PublicWaiter = () => {
       toast({ title: 'Failed to send order', description: err.response?.data?.message, variant: 'destructive' });
     } finally {
       setOrderLoading(false);
+    }
+  };
+
+  const requestBill = async (paymentMethod: 'CASH' | 'ONLINE') => {
+    if (!activeTable || !existingOrder || billLoading) return;
+    setBillLoading(true);
+    try {
+      await api.post(`/public/waiter/${slug}/tables/${activeTable._id}/bill`, { paymentMethod });
+      toast({ title: 'Bill request sent', description: 'The owner will generate and print the final bill.' });
+      setShowBillDialog(false);
+      const res = await api.get(`/public/waiter/${slug}/tables/${activeTable._id}/order`);
+      setExistingOrder(res.data.data || null);
+    } catch (err: any) {
+      toast({ title: 'Bill request failed', description: err.response?.data?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setBillLoading(false);
     }
   };
 
@@ -313,8 +331,32 @@ const PublicWaiter = () => {
                 >
                   {orderLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Send to Kitchen'}
                 </Button>
+                {existingOrder && existingOrder.items?.length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-11 mt-2"
+                    disabled={existingOrder.billRequestStatus === 'REQUESTED' || billLoading}
+                    onClick={() => setShowBillDialog(true)}
+                  >
+                    {existingOrder.billRequestStatus === 'REQUESTED' ? 'Bill Requested' : 'Generate Final Bill'}
+                  </Button>
+                )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showBillDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900">Select payment mode</h3>
+            <p className="mt-1 text-sm text-gray-500">This is saved for tracking only. The owner will generate and print the bill.</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <Button disabled={billLoading} onClick={() => requestBill('CASH')}>Cash</Button>
+              <Button disabled={billLoading} onClick={() => requestBill('ONLINE')}>Online</Button>
+            </div>
+            <Button variant="ghost" className="mt-2 w-full" onClick={() => setShowBillDialog(false)}>Cancel</Button>
           </div>
         </div>
       )}
