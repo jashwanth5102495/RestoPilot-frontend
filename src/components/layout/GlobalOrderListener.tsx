@@ -19,7 +19,7 @@ export default function GlobalOrderListener() {
       title: 'Bill request received',
       description: `${tableName} requested a final bill (${order.billRequestedPaymentMethod || 'payment mode selected'}).`,
       duration: 15000,
-      className: 'bg-white border-amber-200 shadow-lg',
+      className: 'bg-emerald-600 border-emerald-700 text-white shadow-lg',
       action: (
         <ToastAction altText="Open tables" onClick={() => navigate('/tables')}>
           Open Tables
