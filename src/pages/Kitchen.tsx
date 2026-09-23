@@ -82,7 +82,7 @@ const Kitchen = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await api.get('/orders?status=PLACED,PREPARING');
+      const res = await api.get('/orders?status=PLACED,PREPARING&view=kitchen');
       setOrders(res.data.data.filter((o: any) => o.orderStatus === 'PLACED' || o.orderStatus === 'PREPARING'));
     } catch (err) {
       toast({ title: 'Error fetching orders', variant: 'destructive' });
