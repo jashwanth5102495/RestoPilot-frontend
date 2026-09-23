@@ -24,24 +24,28 @@ export default function Subscription() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [authRes, priceRes, historyRes] = await Promise.all([
+        const [authRes, priceRes, historyRes] = await Promise.allSettled([
           api.get('/auth/me'),
           api.get('/subscription/price'),
           api.get('/subscription/history')
         ])
 
-        const restaurant = authRes.data.data.user?.restaurant
+        if (authRes.status === 'rejected' || priceRes.status === 'rejected') {
+          throw authRes.status === 'rejected' ? authRes.reason : priceRes.reason
+        }
+
+        const restaurant = authRes.value.data.data.user?.restaurant
         if (restaurant) {
           setStatus(restaurant.subscriptionStatus)
           setExpiresAt(restaurant.subscriptionExpiresAt)
         }
         
-        if (priceRes.data.data?.amount) {
-          setAmount(priceRes.data.data.amount)
+        if (priceRes.value.data.data?.amount) {
+          setAmount(priceRes.value.data.data.amount)
         }
 
-        if (historyRes.data.data) {
-          setHistory(historyRes.data.data)
+        if (historyRes.status === 'fulfilled' && historyRes.value.data.data) {
+          setHistory(historyRes.value.data.data)
         }
       } catch (err) {
         console.error(err)
@@ -128,17 +132,19 @@ export default function Subscription() {
         })
         
         // Refresh data
-        const [authRes, historyRes] = await Promise.all([
+        const [authRes, historyRes] = await Promise.allSettled([
           api.get('/auth/me'),
           api.get('/subscription/history')
         ])
-        const restaurant = authRes.data.data.user?.restaurant
-        if (restaurant) {
-          setStatus(restaurant.subscriptionStatus)
-          setExpiresAt(restaurant.subscriptionExpiresAt)
+        if (authRes.status === 'fulfilled') {
+          const restaurant = authRes.value.data.data.user?.restaurant
+          if (restaurant) {
+            setStatus(restaurant.subscriptionStatus)
+            setExpiresAt(restaurant.subscriptionExpiresAt)
+          }
         }
-        if (historyRes.data.data) {
-          setHistory(historyRes.data.data)
+        if (historyRes.status === 'fulfilled' && historyRes.value.data.data) {
+          setHistory(historyRes.value.data.data)
         }
       } else {
         toast({
