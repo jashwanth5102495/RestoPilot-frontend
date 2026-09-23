@@ -41,9 +41,12 @@ const PublicKds = () => {
     fetchOrders();
   };
 
-  const updateStatus = async (orderId: string, status: string) => {
+  const updateStatus = async (order: any, status: string) => {
     try {
-      await api.patch(`/public/kds/${slug}/orders/${orderId}/status`, { status });
+      await api.patch(`/public/kds/${slug}/orders/${order.parentOrderId || order._id}/status`, {
+        status,
+        batchId: order.kitchenBatchId
+      });
       toast({ title: 'Order status updated' });
       fetchOrders();
     } catch (err) {
@@ -150,12 +153,12 @@ const PublicKds = () => {
                   
                   <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
                     {order.orderStatus === 'PLACED' && (
-                      <Button size="lg" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold" onClick={() => updateStatus(order._id, 'PREPARING')}>
+                      <Button size="lg" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold" onClick={() => updateStatus(order, 'PREPARING')}>
                         Start Preparing
                       </Button>
                     )}
                     {order.orderStatus === 'PREPARING' && (
-                      <Button size="lg" className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold" onClick={() => updateStatus(order._id, 'READY')}>
+                      <Button size="lg" className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold" onClick={() => updateStatus(order, 'READY')}>
                         Mark Ready
                       </Button>
                     )}

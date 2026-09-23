@@ -89,9 +89,12 @@ const Kitchen = () => {
     }
   };
 
-  const updateStatus = async (orderId: string, status: string) => {
+  const updateStatus = async (order: any, status: string) => {
     try {
-      await api.patch(`/orders/${orderId}/status`, { status });
+      await api.patch(`/orders/${order.parentOrderId || order._id}/status`, {
+        status,
+        batchId: order.kitchenBatchId
+      });
       toast({ title: `Order status updated to ${status}` });
     } catch (err: any) {
       toast({ title: 'Error updating status', description: err.response?.data?.message, variant: 'destructive' });
@@ -173,12 +176,12 @@ const Kitchen = () => {
               
               <div className="flex gap-2">
                 {order.orderStatus === 'PLACED' && (
-                  <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={() => updateStatus(order._id, 'PREPARING')}>
+                  <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={() => updateStatus(order, 'PREPARING')}>
                     Start Preparing
                   </Button>
                 )}
                 {order.orderStatus === 'PREPARING' && (
-                  <Button className="w-full bg-green-500 hover:bg-green-600" onClick={() => updateStatus(order._id, 'READY')}>
+                  <Button className="w-full bg-green-500 hover:bg-green-600" onClick={() => updateStatus(order, 'READY')}>
                     Mark Ready
                   </Button>
                 )}
