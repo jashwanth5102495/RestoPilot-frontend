@@ -7,16 +7,30 @@ import { Lock, CreditCard } from 'lucide-react'
 
 export default function SubscriptionOverlay({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
-  const [status, setStatus] = useState<string>('ACTIVE')
+  const [status, setStatus] = useState<string>('PENDING')
+  const [expiresAt, setExpiresAt] = useState<string | null>(null)
+  const location = useLocation()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const res = await api.get('/auth/me')
-        const currentStatus = res.data.data.user?.restaurant?.subscriptionStatus
+        const [authRes, subscriptionRes] = await Promise.allSettled([
+          api.get('/auth/me'),
+          api.get('/subscription/status'),
+        ])
+        const currentStatus = authRes.status === 'fulfilled' ? authRes.value.data.data.user?.restaurant?.subscriptionStatus : undefined
+        const currentExpiry = authRes.status === 'fulfilled' ? authRes.value.data.data.user?.restaurant?.subscriptionExpiresAt : undefined
         if (currentStatus) {
           setStatus(currentStatus)
+        }
+        if (subscriptionRes.status === 'fulfilled') {
+          const access = subscriptionRes.value.data.data.access
+          const subscription = subscriptionRes.value.data.data.subscription
+          setStatus(access?.active ? 'ACTIVE' : subscription?.status || currentStatus || 'EXPIRED')
+          setExpiresAt(subscription?.currentPeriodEnd || currentExpiry || null)
+        } else {
+          setExpiresAt(currentExpiry || null)
         }
       } catch (error) {
         console.error(error)
@@ -29,9 +43,10 @@ export default function SubscriptionOverlay({ children }: { children: React.Reac
 
   if (loading) return <div className="h-screen w-full flex items-center justify-center">Loading...</div>
 
-  const location = useLocation()
   const isSubscriptionPage = location.pathname === '/subscription'
-  const isLocked = false // Bypass subscription check for development & testing
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/'
+  const isLocked = !isSubscriptionPage && !isDashboard &&
+    (status !== 'ACTIVE' || !expiresAt || new Date(expiresAt) <= new Date())
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
@@ -54,7 +69,7 @@ export default function SubscriptionOverlay({ children }: { children: React.Reac
             <CardContent className="pt-6">
               <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 flex justify-between items-center">
                 <span className="text-gray-600 font-medium">Monthly Plan</span>
-                <span className="text-xl font-bold text-gray-900">₹5,000</span>
+                <span className="text-xl font-bold text-gray-900">Open subscription page</span>
               </div>
               <Button 
                 className="w-full h-12 text-lg bg-orange-600 hover:bg-orange-700 text-white"

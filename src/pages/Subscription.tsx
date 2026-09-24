@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,16 +18,20 @@ export default function Subscription() {
   const [initLoading, setInitLoading] = useState(true)
   const [status, setStatus] = useState<string>('PENDING')
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
-  const [amount, setAmount] = useState<number>(5000)
+  const [amount, setAmount] = useState<number>(0)
   const [history, setHistory] = useState<any[]>([])
+  const [paymentMode, setPaymentMode] = useState<'NORMAL' | 'AUTOPAY'>('NORMAL')
+  const [mandateStatus, setMandateStatus] = useState<string>('NOT_ENABLED')
+  const cashfreeRef = useRef<any>(null)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [authRes, priceRes, historyRes] = await Promise.allSettled([
+        const [authRes, priceRes, historyRes, subscriptionRes] = await Promise.allSettled([
           api.get('/auth/me'),
           api.get('/subscription/price'),
-          api.get('/subscription/history')
+          api.get('/subscription/history'),
+          api.get('/subscription/status')
         ])
 
         if (authRes.status === 'rejected' || priceRes.status === 'rejected') {
@@ -47,6 +51,12 @@ export default function Subscription() {
         if (historyRes.status === 'fulfilled' && historyRes.value.data.data) {
           setHistory(historyRes.value.data.data)
         }
+        if (subscriptionRes.status === 'fulfilled') {
+          const subscription = subscriptionRes.value.data.data.subscription
+          setPaymentMode(subscription.paymentMode || 'NORMAL')
+          setMandateStatus(subscription.mandateStatus || 'NOT_ENABLED')
+          if (subscriptionRes.value.data.data.access?.amount) setAmount(subscriptionRes.value.data.data.access.amount)
+        }
       } catch (err) {
         console.error(err)
         toast({
@@ -60,6 +70,12 @@ export default function Subscription() {
     }
     fetchData()
   }, [toast])
+
+  useEffect(() => {
+    if (window.Cashfree) {
+      cashfreeRef.current = window.Cashfree({ mode: import.meta.env.VITE_CASHFREE_ENV || 'sandbox' })
+    }
+  }, [])
 
   const handlePay = async () => {
     setLoading(true)
@@ -83,7 +99,7 @@ export default function Subscription() {
       
       // IMPORTANT: In a real app, environment should be dynamic based on your config,
       // here we assume sandbox if we have a real session ID but testing.
-      const cashfree = window.Cashfree({ mode: "sandbox" }) // Change to "production" in prod
+      const cashfree = cashfreeRef.current || window.Cashfree({ mode: import.meta.env.VITE_CASHFREE_ENV || 'sandbox' })
 
       const result = await cashfree.checkout({
         paymentSessionId: paymentSessionId,
@@ -116,6 +132,46 @@ export default function Subscription() {
         description: err.response?.data?.message || err.message || 'Could not initiate payment.',
         variant: 'destructive'
       })
+      setLoading(false)
+    }
+  }
+
+  const handleAutopay = async () => {
+    setLoading(true)
+    try {
+      const response = await api.post('/subscription/autopay/create')
+      const { subscriptionSessionId } = response.data.data
+      if (!subscriptionSessionId) {
+        toast({ title: 'Autopay already enabled', description: 'Your current mandate is active.' })
+        return
+      }
+      const cashfree = cashfreeRef.current || window.Cashfree({ mode: import.meta.env.VITE_CASHFREE_ENV || 'sandbox' })
+      const result = await cashfree.subscriptionsCheckout({
+        subsSessionId: subscriptionSessionId,
+        redirectTarget: '_modal',
+      })
+      if (result?.error) {
+        toast({ title: 'Autopay incomplete', description: result.error.message || 'Mandate authorization was not completed.' })
+      } else {
+        toast({ title: 'Autopay authorization submitted', description: 'We will activate recurring billing after Cashfree confirms the mandate.' })
+      }
+    } catch (err: any) {
+      toast({ title: 'Autopay error', description: err.response?.data?.message || err.message || 'Could not start Autopay.', variant: 'destructive' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCancelAutopay = async () => {
+    setLoading(true)
+    try {
+      await api.post('/subscription/autopay/manage', { action: 'CANCEL' })
+      setPaymentMode('NORMAL')
+      setMandateStatus('CANCELLED')
+      toast({ title: 'Autopay cancelled', description: 'Your current paid period remains active. The next payment will not be automatic.' })
+    } catch (err: any) {
+      toast({ title: 'Could not cancel Autopay', description: err.response?.data?.message || err.message, variant: 'destructive' })
+    } finally {
       setLoading(false)
     }
   }
@@ -217,9 +273,18 @@ export default function Subscription() {
               <p className="text-sm text-gray-500">Includes all RestoPilot features (Billing, Inventory, Recipes, Online Orders, Analytics)</p>
             </div>
 
+            <div className="flex gap-2 mb-4">
+              <Button type="button" variant={paymentMode === 'NORMAL' ? 'default' : 'outline'} onClick={() => setPaymentMode('NORMAL')} className="flex-1">
+                Normal Pay
+              </Button>
+              <Button type="button" variant={paymentMode === 'AUTOPAY' ? 'default' : 'outline'} onClick={() => setPaymentMode('AUTOPAY')} className="flex-1">
+                Autopay
+              </Button>
+            </div>
+
             <Button 
               className="w-full h-12 text-lg bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={handlePay}
+              onClick={paymentMode === 'AUTOPAY' ? handleAutopay : handlePay}
               disabled={loading}
             >
               {loading ? (
@@ -227,8 +292,13 @@ export default function Subscription() {
               ) : (
                 <CreditCard className="w-5 h-5 mr-2" />
               )}
-              {loading ? 'Processing...' : status === 'ACTIVE' ? 'Renew Early' : 'Pay Now'}
+              {loading ? 'Processing...' : paymentMode === 'AUTOPAY' ? 'Enable Autopay' : status === 'ACTIVE' ? 'Renew Early' : 'Pay Now'}
             </Button>
+            {mandateStatus === 'ACTIVE' && (
+              <Button variant="outline" className="w-full mt-3" onClick={handleCancelAutopay} disabled={loading}>
+                Cancel Autopay
+              </Button>
+            )}
           </CardContent>
         </Card>
 
