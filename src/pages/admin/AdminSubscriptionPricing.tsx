@@ -10,7 +10,9 @@ export default function AdminSubscriptionPricing() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [thresholdSaving, setThresholdSaving] = useState(false)
   const [amount, setAmount] = useState<number>(5000)
+  const [minimumAmount, setMinimumAmount] = useState<number>(100)
   const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [clientAmounts, setClientAmounts] = useState<Record<string, number>>({})
 
@@ -22,6 +24,7 @@ export default function AdminSubscriptionPricing() {
           api.get('/admin/subscriptions'),
         ])
         setAmount(priceRes.data.data.amount)
+        setMinimumAmount(priceRes.data.data.minimumAmount ?? 100)
         const rows = subscriptionsRes.data.data || []
         setSubscriptions(rows)
         setClientAmounts(Object.fromEntries(rows.map((row: any) => [row.restaurantId?._id || row.restaurantId, row.pendingAmount ?? row.amount])))
@@ -40,10 +43,10 @@ export default function AdminSubscriptionPricing() {
   }, [toast])
 
   const handleSave = async () => {
-    if (amount < 100) {
+    if (amount < minimumAmount) {
       toast({
         title: 'Invalid Amount',
-        description: 'The subscription amount must be at least ₹100.',
+        description: `The subscription amount must be at least ₹${minimumAmount}.`,
         variant: 'destructive',
       })
       return
@@ -68,11 +71,36 @@ export default function AdminSubscriptionPricing() {
     }
   }
 
+  const handleSaveMinimum = async () => {
+    if (minimumAmount < 1 || minimumAmount > amount) {
+      toast({
+        title: 'Invalid Threshold',
+        description: 'The minimum threshold must be at least ₹1 and cannot exceed the default subscription price.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setThresholdSaving(true)
+    try {
+      await api.put('/admin/subscription-minimum-price', { minimumAmount })
+      toast({ title: 'Success', description: 'Minimum subscription threshold updated successfully.' })
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.response?.data?.message || 'Failed to update minimum threshold',
+        variant: 'destructive',
+      })
+    } finally {
+      setThresholdSaving(false)
+    }
+  }
+
   const saveClientPrice = async (subscription: any) => {
     const restaurantId = subscription.restaurantId?._id || subscription.restaurantId
     const nextAmount = clientAmounts[restaurantId]
-    if (!nextAmount || nextAmount < 100) {
-      toast({ title: 'Invalid Amount', description: 'The restaurant amount must be at least ₹100.', variant: 'destructive' })
+    if (!nextAmount || nextAmount < minimumAmount) {
+      toast({ title: 'Invalid Amount', description: `The restaurant amount must be at least ₹${minimumAmount}.`, variant: 'destructive' })
       return
     }
 
@@ -129,7 +157,7 @@ export default function AdminSubscriptionPricing() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
               <Input
                 type="number"
-                min="100"
+                min={minimumAmount}
                 value={amount}
                 onChange={(e) => setAmount(Number(e.target.value))}
                 className="pl-8 text-lg"
@@ -148,6 +176,33 @@ export default function AdminSubscriptionPricing() {
               <Save className="w-4 h-4 mr-2" />
             )}
             Save Pricing
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Minimum subscription threshold</CardTitle>
+          <CardDescription>Amounts below this value cannot be assigned to the default price or an individual restaurant.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Minimum amount (INR)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+              <Input
+                type="number"
+                min="1"
+                max={amount}
+                value={minimumAmount}
+                onChange={(event) => setMinimumAmount(Number(event.target.value))}
+                className="pl-8 text-lg"
+              />
+            </div>
+          </div>
+          <Button onClick={handleSaveMinimum} disabled={thresholdSaving} className="w-full sm:w-auto">
+            {thresholdSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Save Minimum Threshold
           </Button>
         </CardContent>
       </Card>
@@ -178,7 +233,7 @@ export default function AdminSubscriptionPricing() {
                       <td className="p-3">
                         <Input
                           type="number"
-                          min="100"
+                          min={minimumAmount}
                           value={clientAmounts[restaurantId] ?? subscription.amount}
                           onChange={event => setClientAmounts(current => ({ ...current, [restaurantId]: Number(event.target.value) }))}
                           className="w-32"
