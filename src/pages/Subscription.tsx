@@ -22,6 +22,7 @@ export default function Subscription() {
   const [history, setHistory] = useState<any[]>([])
   const [paymentMode, setPaymentMode] = useState<'NORMAL' | 'AUTOPAY'>('NORMAL')
   const [mandateStatus, setMandateStatus] = useState<string>('NOT_ENABLED')
+  const [autopayReturnStatus, setAutopayReturnStatus] = useState<'IDLE' | 'PENDING' | 'ACTIVE' | 'FAILED'>('IDLE')
   const cashfreeRef = useRef<any>(null)
 
   useEffect(() => {
@@ -70,6 +71,49 @@ export default function Subscription() {
     }
     fetchData()
   }, [toast])
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search)
+    if (query.get('autopay') !== 'return') return
+
+    window.history.replaceState({}, document.title, '/subscription')
+    setAutopayReturnStatus('PENDING')
+
+    let attempts = 0
+    const pollStatus = async () => {
+      attempts += 1
+      try {
+        const response = await api.get('/subscription/status')
+        const subscription = response.data.data.subscription
+        const currentMandateStatus = subscription.mandateStatus || 'NOT_ENABLED'
+        setMandateStatus(currentMandateStatus)
+        setPaymentMode(subscription.paymentMode || 'NORMAL')
+
+        if (currentMandateStatus === 'ACTIVE') {
+          setAutopayReturnStatus('ACTIVE')
+          return true
+        }
+        if (currentMandateStatus === 'FAILED' || currentMandateStatus === 'CANCELLED') {
+          setAutopayReturnStatus('FAILED')
+          return true
+        }
+      } catch (error) {
+        console.error('Failed to refresh Autopay status:', error)
+      }
+      return attempts >= 10
+    }
+
+    const interval = window.setInterval(async () => {
+      const finished = await pollStatus()
+      if (finished) window.clearInterval(interval)
+    }, 3000)
+
+    pollStatus().then(finished => {
+      if (finished) window.clearInterval(interval)
+    })
+
+    return () => window.clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     if (window.Cashfree) {
@@ -235,6 +279,22 @@ export default function Subscription() {
         <h1 className="text-3xl font-bold text-gray-900">Subscription</h1>
         <p className="text-gray-500 mt-2">Manage your RestoPilot billing and access.</p>
       </div>
+
+      {autopayReturnStatus === 'PENDING' && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Autopay authorization was submitted. Waiting for Cashfree confirmation...
+        </div>
+      )}
+      {autopayReturnStatus === 'ACTIVE' && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          Autopay is enabled. Your next subscription payment will be collected automatically.
+        </div>
+      )}
+      {autopayReturnStatus === 'FAILED' && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          Autopay was not enabled. You can try authorization again or continue with normal payment.
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-8">
         <Card className="border-orange-200">
