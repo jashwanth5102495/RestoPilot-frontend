@@ -88,6 +88,34 @@ export default function PublicBilling() {
     }
   }
 
+  const refreshTables = async (silent = false) => {
+    try {
+      const tablesRes = await api.get(`/public/billing/${slug}/tables`)
+      const newActiveOrders = tablesRes.data.data.activeOrders
+      
+      const newBillRequests = newActiveOrders.filter((o: any) => o.billRequestStatus === 'REQUESTED')
+      if (!silent) {
+        for (const order of newBillRequests) {
+          if (!prevBillRequestsRef.current.has(order._id)) {
+            const tableName = order.tableId?.name || (order.tableId?.tableNumber ? `Table ${order.tableId.tableNumber}` : 'Unknown Table')
+            toast({
+              title: '🔔 Bill request received',
+              description: `Waiter at ${tableName} is requesting a bill.`,
+              duration: 10000,
+              className: 'bg-orange-500 text-white border-orange-600',
+            })
+          }
+        }
+      }
+      
+      prevBillRequestsRef.current = new Set(newBillRequests.map((o: any) => o._id))
+      setTables(tablesRes.data.data.tables)
+      setActiveOrders(newActiveOrders)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -122,32 +150,6 @@ export default function PublicBilling() {
     return () => clearInterval(interval)
   }, [slug])
 
-  const refreshTables = async (silent = false) => {
-    try {
-      const tablesRes = await api.get(`/public/billing/${slug}/tables`)
-      const newActiveOrders = tablesRes.data.data.activeOrders
-      
-      const newBillRequests = newActiveOrders.filter((o: any) => o.billRequestStatus === 'REQUESTED')
-      if (!silent) {
-        for (const order of newBillRequests) {
-          if (!prevBillRequestsRef.current.has(order._id)) {
-            toast({
-              title: 'Bill request received',
-              description: `Waiter at ${order.tableId?.name || `Table ${order.tableId?.tableNumber || ''}`} requested a bill.`,
-              duration: 10000,
-              className: 'bg-orange-500 text-white border-orange-600',
-            })
-          }
-        }
-      }
-      
-      prevBillRequestsRef.current = new Set(newBillRequests.map((o: any) => o._id))
-      setTables(tablesRes.data.data.tables)
-      setActiveOrders(newActiveOrders)
-    } catch (err) {
-      console.error(err)
-    }
-  }
 
   const handleGenerateWaiterBill = async () => {
     if (!selectedTable) return
