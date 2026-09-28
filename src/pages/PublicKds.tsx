@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, Volume2, VolumeX } from 'lucide-react';
 
 const PublicKds = () => {
   const { slug } = useParams();
@@ -12,8 +12,11 @@ const PublicKds = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const seenOrderIdsRef = useRef<Set<string> | null>(null);
 
   useEffect(() => {
+    seenOrderIdsRef.current = null;
     fetchOrders();
 
     // Polling every 6s for public KDS with resilient retries
@@ -27,7 +30,21 @@ const PublicKds = () => {
   const fetchOrders = async () => {
     try {
       const res = await api.get(`/public/kds/${slug}/orders`);
-      setOrders(res.data.data || []);
+      const nextOrders = res.data.data || [];
+      const nextOrderIds = new Set(nextOrders.map((order: any) => order._id));
+
+      if (seenOrderIdsRef.current) {
+        const newOrders = nextOrders.filter((order: any) => !seenOrderIdsRef.current?.has(order._id));
+        if (newOrders.length > 0 && soundEnabled) {
+          const notification = new Audio('/new-order-notification.mp3');
+          notification.play().catch((err) => {
+            console.error('Failed to play notification sound:', err);
+          });
+        }
+      }
+
+      seenOrderIdsRef.current = nextOrderIds;
+      setOrders(nextOrders);
     } catch (err) {
       // Silently retry on weak network
     } finally {
@@ -68,6 +85,24 @@ const PublicKds = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">Kitchen Display System (KDS)</h1>
           <div className="flex items-center gap-4">
+            <Button
+              variant={soundEnabled ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                const newState = !soundEnabled;
+                setSoundEnabled(newState);
+                if (newState) {
+                  // Play a silent sound to unlock audio context immediately upon user interaction
+                  const audio = new Audio('/new-order-notification.mp3');
+                  audio.volume = 0;
+                  audio.play().catch(() => {});
+                }
+              }}
+              className={`gap-2 ${soundEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              {soundEnabled ? 'Sound On' : 'Sound Off'}
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 
