@@ -91,13 +91,15 @@ export default function PublicBilling() {
   const refreshTables = async (silent = false) => {
     try {
       const tablesRes = await api.get(`/public/billing/${slug}/tables`)
+      const newTables = tablesRes.data.data.tables
       const newActiveOrders = tablesRes.data.data.activeOrders
-      
       const newBillRequests = newActiveOrders.filter((o: any) => o.billRequestStatus === 'REQUESTED')
       if (!silent) {
         for (const order of newBillRequests) {
           if (!prevBillRequestsRef.current.has(order._id)) {
-            const tableName = order.tableId?.name || (order.tableId?.tableNumber ? `Table ${order.tableId.tableNumber}` : 'Unknown Table')
+            // tableId on orders is a raw ObjectId (not populated), so look up the table from the tables array
+            const table = newTables.find((t: any) => t._id === order.tableId || t._id?.toString() === order.tableId?.toString())
+            const tableName = table?.name || (table?.tableNumber ? `Table ${table.tableNumber}` : 'Unknown Table')
             toast({
               title: '🔔 Bill request received',
               description: `Waiter at ${tableName} is requesting a bill.`,
@@ -109,7 +111,7 @@ export default function PublicBilling() {
       }
       
       prevBillRequestsRef.current = new Set(newBillRequests.map((o: any) => o._id))
-      setTables(tablesRes.data.data.tables)
+      setTables(newTables)
       setActiveOrders(newActiveOrders)
     } catch (err) {
       console.error(err)
