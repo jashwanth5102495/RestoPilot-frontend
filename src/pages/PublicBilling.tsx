@@ -48,6 +48,7 @@ export default function PublicBilling() {
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const prevBillRequestsRef = useRef<Set<string>>(new Set())
 
   const fetchOnlineOrders = async (silent = false) => {
     try {
@@ -115,21 +116,59 @@ export default function PublicBilling() {
     const interval = setInterval(() => {
       fetchOnlineOrders(false)
       fetchQrTableOrders(false)
-      if (activeTab === 'TABLES') {
-        refreshTables()
-      }
+      refreshTables()
     }, 10000)
 
     return () => clearInterval(interval)
   }, [slug])
 
-  const refreshTables = async () => {
+  const refreshTables = async (silent = false) => {
     try {
       const tablesRes = await api.get(`/public/billing/${slug}/tables`)
+      const newActiveOrders = tablesRes.data.data.activeOrders
+      
+      const newBillRequests = newActiveOrders.filter((o: any) => o.billRequestStatus === 'REQUESTED')
+      if (!silent) {
+        for (const order of newBillRequests) {
+          if (!prevBillRequestsRef.current.has(order._id)) {
+            toast({
+              title: 'Bill request received',
+              description: `Waiter at ${order.tableId?.name || `Table ${order.tableId?.tableNumber || ''}`} requested a bill.`,
+              duration: 10000,
+              className: 'bg-orange-500 text-white border-orange-600',
+            })
+          }
+        }
+      }
+      
+      prevBillRequestsRef.current = new Set(newBillRequests.map((o: any) => o._id))
       setTables(tablesRes.data.data.tables)
-      setActiveOrders(tablesRes.data.data.activeOrders)
+      setActiveOrders(newActiveOrders)
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const handleGenerateWaiterBill = async () => {
+    if (!selectedTable) return
+    const order = activeOrders.find(o => o.tableId === selectedTable._id)
+    if (!order || order.billRequestStatus !== 'REQUESTED') return
+
+    setIsProcessing(true)
+    try {
+      const res = await api.post(`/public/billing/${slug}/tables/${selectedTable._id}/generate-bill`)
+      toast({ title: 'Bill Generated', description: 'The waiter can now settle the bill.' })
+      
+      // Optional: auto-print the receipt
+      if (res.data?.data) {
+        printReceipt(res.data.data, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
+      }
+      
+      refreshTables()
+    } catch (err: any) {
+      toast({ title: 'Error generating bill', description: err.response?.data?.message || 'Please try again', variant: 'destructive' })
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -632,14 +671,20 @@ export default function PublicBilling() {
                             : 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
                       }`}
                     >
-                      <div className="flex justify-center mb-2">
+                      <div className="flex justify-center mb-2 relative">
                         <div className={`p-3 rounded-full ${isOccupied ? 'bg-orange-100 text-orange-600' : 'bg-gray-200 text-gray-400'}`}>
                           <UtensilsCrossed className="w-6 h-6" />
                         </div>
+                        {order?.billRequestStatus === 'REQUESTED' && (
+                          <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 border-2 border-white"></span>
+                          </span>
+                        )}
                       </div>
                       <h3 className={`font-bold ${isOccupied ? 'text-gray-900' : 'text-gray-500'}`}>{table.name}</h3>
                       <p className="text-sm text-gray-500">
-                        {isOccupied ? `₹${order.total}` : 'Available'}
+                        {isOccupied ? (order.billRequestStatus === 'REQUESTED' ? <span className="text-red-500 font-bold animate-pulse">Bill Requested</span> : `₹${order.total}`) : 'Available'}
                       </p>
                     </button>
                   )
@@ -1089,9 +1134,17 @@ export default function PublicBilling() {
                     </Button>
                   </div>
                 ) : activeTab === 'TABLES' ? (
-                  <Button className="w-full font-semibold text-base shadow-md" onClick={handleSettleTable} disabled={!selectedTable || isProcessing}>
-                    {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Settle Table Bill'}
-                  </Button>
+                  <div className="space-y-2 w-full">
+                    {tableOrder?.billRequestStatus === 'REQUESTED' ? (
+                      <Button className="w-full font-semibold text-base shadow-md bg-orange-500 hover:bg-orange-600 text-white" onClick={handleGenerateWaiterBill} disabled={!selectedTable || isProcessing}>
+                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generate Bill for Waiter'}
+                      </Button>
+                    ) : (
+                      <Button className="w-full font-semibold text-base shadow-md" onClick={handleSettleTable} disabled={!selectedTable || isProcessing}>
+                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Settle Table Bill'}
+                      </Button>
+                    )}
+                  </div>
                 ) : activeTab === 'QR_TABLES' ? (
                   /* QR Table Actions */
                   <div className="space-y-2">
