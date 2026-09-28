@@ -12,7 +12,9 @@ const PublicKds = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    return localStorage.getItem('kdsSoundEnabled') === 'true';
+  });
   const seenOrderIdsRef = useRef<Set<string> | null>(null);
 
   useEffect(() => {
@@ -91,6 +93,7 @@ const PublicKds = () => {
               onClick={() => {
                 const newState = !soundEnabled;
                 setSoundEnabled(newState);
+                localStorage.setItem('kdsSoundEnabled', String(newState));
                 if (newState) {
                   // Play a silent sound to unlock audio context immediately upon user interaction
                   const audio = new Audio('/new-order-notification.mp3');
