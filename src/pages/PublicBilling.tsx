@@ -1137,7 +1137,7 @@ export default function PublicBilling() {
                   </div>
                 ) : activeTab === 'TABLES' ? (
                   <div className="space-y-2 w-full">
-                    {tableOrder?.billRequestStatus === 'REQUESTED' ? (
+                    {getTableOrder(selectedTable?._id ?? '')?.billRequestStatus === 'REQUESTED' ? (
                       <Button className="w-full font-semibold text-base shadow-md bg-orange-500 hover:bg-orange-600 text-white" onClick={handleGenerateWaiterBill} disabled={!selectedTable || isProcessing}>
                         {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generate Bill for Waiter'}
                       </Button>
