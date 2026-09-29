@@ -118,6 +118,20 @@ export default function PublicBilling() {
     }
   }
 
+  // Silently re-fetches restaurant profile (name, address, phone, gstNumber) from the
+  // backend so the in-memory data stays in sync with admin-dashboard changes.
+  const refreshRestaurantData = async () => {
+    try {
+      const res = await api.get(`/public/billing/${slug}/menu`)
+      const data = res.data.data
+      if (data?.restaurant) {
+        setRestaurantData(data.restaurant)
+      }
+    } catch (err) {
+      console.error('Failed to refresh restaurant data:', err)
+    }
+  }
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -142,11 +156,13 @@ export default function PublicBilling() {
     }
     fetchData()
 
-    // Poll online orders and tables periodically
+    // Poll orders, tables, and restaurant profile periodically so any admin
+    // changes to name / address / phone / GSTIN are picked up automatically.
     const interval = setInterval(() => {
       fetchOnlineOrders(false)
       fetchQrTableOrders(false)
       refreshTables()
+      refreshRestaurantData()
     }, 10000)
 
     return () => clearInterval(interval)

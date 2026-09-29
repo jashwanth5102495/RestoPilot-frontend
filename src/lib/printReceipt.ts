@@ -18,10 +18,10 @@ export const printReceipt = (
   const doc = iframe.contentWindow?.document;
   if (!doc) return;
 
-  const resolvedRestaurantName = (restaurantName || order.restaurantName || order.restaurantId?.name || (typeof window !== 'undefined' ? localStorage.getItem('restaurantName') : '') || 'MYSTERY FAMILY RESTAURANT').toUpperCase();
-  const resolvedRestaurantAddress = restaurantAddress || order.restaurantAddress || order.restaurantId?.address || (typeof window !== 'undefined' ? localStorage.getItem('restaurantAddress') : '') || 'NH47, Bulahalli Gate, Avathi, Devanahalli, Karnataka 562164';
-  const resolvedPhone = restaurantPhone || order.restaurantPhone || order.restaurantId?.phone || (typeof window !== 'undefined' ? localStorage.getItem('restaurantPhone') : '') || '+91 97433 99992';
-  const resolvedGstin = restaurantGstin || order.gstNumber || order.restaurantId?.gstNumber || (typeof window !== 'undefined' ? localStorage.getItem('restaurantGstin') : '') || '29BVXPN5021P1ZL';
+  const resolvedRestaurantName = (restaurantName || order.restaurantName || order.restaurantId?.name || '').toUpperCase();
+  const resolvedRestaurantAddress = restaurantAddress || order.restaurantAddress || order.restaurantId?.address || '';
+  const resolvedPhone = restaurantPhone || order.restaurantPhone || order.restaurantId?.phone || '';
+  const resolvedGstin = restaurantGstin || order.gstNumber || order.restaurantId?.gstNumber || '';
 
   const rawBillNo = order.bill?.billNumber || order.billNumber || order.orderNumber || '5374';
   const rawOrderNo = order.orderNumber || order.bill?.billNumber || '5374';
