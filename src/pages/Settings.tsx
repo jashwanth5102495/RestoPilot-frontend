@@ -23,6 +23,12 @@ export default function Settings() {
   const [taxRate, setTaxRate] = useState("5")
   const [invoicePrefix, setInvoicePrefix] = useState("RP")
 
+  // Dynamic Pricing States
+  const [dynamicPricingEnabled, setDynamicPricingEnabled] = useState(false)
+  const [dynamicPricingStartTime, setDynamicPricingStartTime] = useState("14:00")
+  const [dynamicPricingEndTime, setDynamicPricingEndTime] = useState("18:00")
+  const [dynamicPricingPercentage, setDynamicPricingPercentage] = useState<number | string>(0)
+
   // Staff States
   const [staffList, setStaffList] = useState<any[]>([])
   const [staffLoading, setStaffLoading] = useState(false)
@@ -95,6 +101,12 @@ export default function Settings() {
       setEmail(rest.email || "")
       setGstNumber(rest.gstNumber || "")
       
+      const dp = rest.dynamicPricing || {}
+      setDynamicPricingEnabled(dp.enabled || false)
+      setDynamicPricingStartTime(dp.startTime || "14:00")
+      setDynamicPricingEndTime(dp.endTime || "18:00")
+      setDynamicPricingPercentage(dp.percentage || 0)
+      
       // Update localStorage with fresh data
       localStorage.setItem('user', JSON.stringify(user))
     } catch (error) {
@@ -119,7 +131,13 @@ export default function Settings() {
         phone,
         address,
         email,
-        gstNumber
+        gstNumber,
+        dynamicPricing: {
+          enabled: dynamicPricingEnabled,
+          startTime: dynamicPricingStartTime,
+          endTime: dynamicPricingEndTime,
+          percentage: Number(dynamicPricingPercentage)
+        }
       })
 
       const updatedRest = res.data.data
@@ -162,6 +180,7 @@ export default function Settings() {
           <TabsList className="mb-4">
             <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
             <TabsTrigger value="billing">Billing & Tax</TabsTrigger>
+            <TabsTrigger value="pricing">Dynamic Pricing</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
 
@@ -250,6 +269,64 @@ export default function Settings() {
                 </div>
                 <Button onClick={() => toast({ title: "Settings Saved", description: "Billing configurations updated successfully." })}>
                   Save Settings
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="pricing">
+            <Card>
+              <CardHeader>
+                <CardTitle>Dynamic Pricing (Surge/Discount)</CardTitle>
+                <CardDescription>Automatically adjust prices of all items during a specific time range.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <input 
+                    type="checkbox" 
+                    id="dpEnabled" 
+                    checked={dynamicPricingEnabled}
+                    onChange={(e) => setDynamicPricingEnabled(e.target.checked)}
+                    className="w-4 h-4 text-primary rounded border-gray-300"
+                  />
+                  <Label htmlFor="dpEnabled" className="font-semibold cursor-pointer">Enable Dynamic Pricing</Label>
+                </div>
+                
+                {dynamicPricingEnabled && (
+                  <div className="grid gap-4 md:grid-cols-2 p-4 border rounded-lg bg-gray-50">
+                    <div className="space-y-2">
+                      <Label htmlFor="dpStart">Start Time (24hr)</Label>
+                      <Input 
+                        id="dpStart" 
+                        type="time" 
+                        value={dynamicPricingStartTime}
+                        onChange={(e: any) => setDynamicPricingStartTime(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dpEnd">End Time (24hr)</Label>
+                      <Input 
+                        id="dpEnd" 
+                        type="time" 
+                        value={dynamicPricingEndTime}
+                        onChange={(e: any) => setDynamicPricingEndTime(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="dpPercent">Percentage Adjustment</Label>
+                      <p className="text-xs text-gray-500 mb-2">Use positive values for price increase (e.g., 20) and negative for discount (e.g., -10).</p>
+                      <Input 
+                        id="dpPercent" 
+                        type="number" 
+                        value={dynamicPricingPercentage}
+                        onChange={(e: any) => setDynamicPricingPercentage(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <Button onClick={handleSaveProfile} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Settings'}
                 </Button>
               </CardContent>
             </Card>
