@@ -16,6 +16,7 @@ const PublicKds = () => {
     return localStorage.getItem('kdsSoundEnabled') === 'true';
   });
   const seenOrderIdsRef = useRef<Set<string> | null>(null);
+  const audioFile = '/new-order-notification.mpeg';
 
   useEffect(() => {
     seenOrderIdsRef.current = null;
@@ -38,7 +39,7 @@ const PublicKds = () => {
       if (seenOrderIdsRef.current) {
         const newOrders = nextOrders.filter((order: any) => !seenOrderIdsRef.current?.has(order._id));
         if (newOrders.length > 0 && soundEnabled) {
-          const notification = new Audio('/new-order-notification.mp3');
+          const notification = new Audio(audioFile);
           notification.play().catch((err) => {
             console.error('Failed to play notification sound:', err);
           });
@@ -96,9 +97,9 @@ const PublicKds = () => {
                 localStorage.setItem('kdsSoundEnabled', String(newState));
                 if (newState) {
                   // Play a silent sound to unlock audio context immediately upon user interaction
-                  const audio = new Audio('/new-order-notification.mp3');
+                  const audio = new Audio(audioFile);
                   audio.volume = 0;
-                  audio.play().catch(() => {});
+                  audio.play().catch(() => { });
                 }
               }}
               className={`gap-2 ${soundEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'text-gray-600 hover:text-gray-900'}`}
@@ -106,10 +107,10 @@ const PublicKds = () => {
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               {soundEnabled ? 'Sound On' : 'Sound Off'}
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleManualRefresh} 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
               disabled={isRefreshing}
               className="gap-2 text-gray-600 hover:text-gray-900"
             >
@@ -125,7 +126,7 @@ const PublicKds = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {orders.map(order => {
             const isOnline = order.orderSource === 'ONLINE';
@@ -165,9 +166,8 @@ const PublicKds = () => {
                       )}
                     </div>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    order.orderStatus === 'PREPARING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
-                  }`}>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${order.orderStatus === 'PREPARING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
                     {order.orderStatus}
                   </span>
                 </CardHeader>
@@ -188,7 +188,7 @@ const PublicKds = () => {
                       </li>
                     ))}
                   </ul>
-                  
+
                   <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
                     {order.orderStatus === 'PLACED' && (
                       <Button size="lg" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold" onClick={() => updateStatus(order, 'PREPARING')}>
