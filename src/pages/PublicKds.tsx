@@ -34,7 +34,7 @@ const PublicKds = () => {
     try {
       const res = await api.get(`/public/kds/${slug}/orders`);
       const nextOrders = res.data.data || [];
-      const nextOrderIds = new Set(nextOrders.map((order: any) => order._id));
+      const nextOrderIds = new Set<string>(nextOrders.map((order: any) => order._id));
 
       if (seenOrderIdsRef.current) {
         const newOrders = nextOrders.filter((order: any) => !seenOrderIdsRef.current?.has(order._id));

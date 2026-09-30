@@ -241,6 +241,7 @@ export default function PublicBilling() {
       const payload: any = {
         items,
         paymentMethod,
+        expectedTotal: Number(total.toFixed(2)),
         customerId: null // Currently unauthenticated
       }
 
@@ -258,11 +259,32 @@ export default function PublicBilling() {
       setCustomerName('')
       setCustomerPhone('')
     } catch (err: any) {
-      toast({
-        title: "Billing Failed",
-        description: err.response?.data?.message || 'Failed to process sale. Check inventory levels.',
-        variant: 'destructive'
-      })
+      if (err.response?.status === 409) {
+        toast({
+          title: "Prices Updated",
+          description: "Menu prices have changed (dynamic pricing). Your cart has been refreshed with the latest prices. Please review and try again.",
+          variant: 'destructive',
+          duration: 8000
+        })
+        try {
+          const res = await api.get(`/public/billing/${slug}/menu`)
+          const freshDishes = res.data.data.dishes
+          setDishes(freshDishes)
+          setCart(prev => prev.map(item => {
+            const freshDish = freshDishes.find((d: any) => d._id === item.dish._id)
+            return freshDish ? { ...item, dish: freshDish } : item
+          }).filter(item => {
+            const freshDish = freshDishes.find((d: any) => d._id === item.dish._id)
+            return freshDish && freshDish.isAvailable
+          }))
+        } catch { /* silently fail refresh */ }
+      } else {
+        toast({
+          title: "Billing Failed",
+          description: err.response?.data?.message || 'Failed to process sale. Check inventory levels.',
+          variant: 'destructive'
+        })
+      }
     } finally {
       setIsProcessing(false)
     }

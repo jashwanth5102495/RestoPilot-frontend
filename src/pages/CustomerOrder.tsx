@@ -71,15 +71,36 @@ export default function CustomerOrder() {
 
     setIsSubmitting(true)
     try {
+      const subtotal = cart.reduce((sum, item) => sum + (item.dish.price * item.quantity), 0)
+      const tax = subtotal * 0.05
+      const expectedTotal = Number((subtotal + tax).toFixed(2))
+      
       const payload = {
         customerInfo,
-        items: cart.map(c => ({ dishId: c.dish._id, quantity: c.quantity }))
+        items: cart.map(c => ({ dishId: c.dish._id, quantity: c.quantity })),
+        expectedTotal
       }
       await api.post(`/public/restaurants/${slug}/orders`, payload)
       setOrderSuccess(true)
       setCart([])
-    } catch (err) {
-      toast({ title: 'Order failed', description: 'Please try again', variant: 'destructive' })
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        toast({ title: 'Prices Updated', description: 'Menu prices have changed. Your cart has been refreshed. Please review and try again.', variant: 'destructive', duration: 8000 })
+        try {
+          const res = await api.get(`/public/restaurants/${slug}`)
+          const freshDishes = res.data.data.dishes
+          setDishes(freshDishes)
+          setCart(prev => prev.map(item => {
+            const freshDish = freshDishes.find((d: any) => d._id === item.dish._id)
+            return freshDish ? { ...item, dish: freshDish } : item
+          }).filter(item => {
+            const freshDish = freshDishes.find((d: any) => d._id === item.dish._id)
+            return freshDish && freshDish.isAvailable
+          }))
+        } catch { /* silently fail */ }
+      } else {
+        toast({ title: 'Order failed', description: 'Please try again', variant: 'destructive' })
+      }
     } finally {
       setIsSubmitting(false)
     }
