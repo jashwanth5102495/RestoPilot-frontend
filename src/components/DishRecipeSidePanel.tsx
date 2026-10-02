@@ -225,7 +225,8 @@ export default function DishRecipeSidePanel({ isOpen, dish, onClose, allIngredie
         dishId: dish._id,
         items: recipeItems.map(item => ({
           ingredientId: item.ingredientId,
-          quantity: Number(item.quantity)
+          quantity: Number(item.quantity),
+          unit: item.unit
         }))
       }
       await api.post('/recipes', recipePayload)

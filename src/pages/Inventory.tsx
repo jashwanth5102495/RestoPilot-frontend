@@ -43,6 +43,7 @@ export default function Inventory() {
   const [ingredientNameInput, setIngredientNameInput] = useState('')
   const [unitInput, setUnitInput] = useState('g')
   const [quantity, setQuantity] = useState('')
+  const [totalCost, setTotalCost] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
 
   const [isInventoryEnabled, setIsInventoryEnabled] = useState(false)
@@ -126,11 +127,18 @@ export default function Inventory() {
     return 'Healthy'
   }
 
+  const getMultiplier = (unit: string) => {
+    const u = unit?.toLowerCase() || ''
+    if (['kg', 'l'].includes(u)) return 1000
+    if (u === 'dozen') return 12
+    return 1
+  }
+
   // Calculated dynamic statistics
   const totalIngredients = ingredients.length
   const lowStockCount = ingredients.filter(i => i.currentStock > 0 && i.currentStock <= i.minimumStock).length
   const outOfStockCount = ingredients.filter(i => i.currentStock <= 0).length
-  const totalStockValue = ingredients.reduce((sum, i) => sum + (Math.max(0, i.currentStock) * (i.averageCost || 0)), 0)
+  const totalStockValue = ingredients.reduce((sum, i) => sum + (Math.max(0, i.currentStock) * getMultiplier(i.unit) * (i.averageCost || 0)), 0)
 
   const selectedIngredient = ingredients.find(i => i.name.toLowerCase() === ingredientNameInput.toLowerCase().trim())
   const currentStockText = selectedIngredient ? `${selectedIngredient.currentStock} ${selectedIngredient.unit}` : '--'
@@ -163,6 +171,11 @@ export default function Inventory() {
         ingId = ingRes.data.data._id
       }
 
+      let calculatedUnitCost = 0
+      if (totalCost && Number(quantity) > 0) {
+        calculatedUnitCost = Number(totalCost) / Number(quantity)
+      }
+
       await api.post('/purchases', {
         paymentStatus: 'PAID',
         purchaseDate: new Date(),
@@ -170,7 +183,7 @@ export default function Inventory() {
         items: [{
           ingredientId: ingId,
           quantity: Number(quantity),
-          unitCost: 0,
+          unitCost: calculatedUnitCost,
           unit: ingUnit
         }]
       })
@@ -183,6 +196,7 @@ export default function Inventory() {
       // Reset form states
       setIngredientNameInput('')
       setQuantity('')
+      setTotalCost('')
       setSelectedSupplierId('')
       setIsDialogOpen(false)
 
@@ -282,6 +296,7 @@ export default function Inventory() {
             <Button className="shadow-sm" onClick={() => {
               setIngredientNameInput('');
               setQuantity('');
+              setTotalCost('');
             }}>
               <Plus className="w-4 h-4 mr-2" /> Add Stock
             </Button>
@@ -344,7 +359,7 @@ export default function Inventory() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="qty">Quantity</Label>
                   <Input 
@@ -353,6 +368,16 @@ export default function Inventory() {
                     placeholder="0" 
                     value={quantity}
                     onChange={(e: any) => setQuantity(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cost">Total Cost (₹)</Label>
+                  <Input 
+                    id="cost" 
+                    type="number" 
+                    placeholder="0" 
+                    value={totalCost}
+                    onChange={(e: any) => setTotalCost(e.target.value)}
                   />
                 </div>
               </div>
