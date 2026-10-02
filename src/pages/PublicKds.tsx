@@ -15,6 +15,10 @@ const PublicKds = () => {
   const [soundEnabled, setSoundEnabled] = useState(() => {
     return localStorage.getItem('kdsSoundEnabled') === 'true';
   });
+  const [completedItems, setCompletedItems] = useState<Record<string, boolean>>(() => {
+    const stored = localStorage.getItem('kdsCompletedItems');
+    return stored ? JSON.parse(stored) : {};
+  });
   const seenOrderIdsRef = useRef<Set<string> | null>(null);
   const audioFile = '/new-order-notification.mpeg';
 
@@ -54,6 +58,15 @@ const PublicKds = () => {
       setLoading(false);
       setIsRefreshing(false);
     }
+  };
+
+  const toggleItemStatus = (orderId: string, itemIdx: number) => {
+    const key = `${orderId}-${itemIdx}`;
+    setCompletedItems(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('kdsCompletedItems', JSON.stringify(next));
+      return next;
+    });
   };
 
   const handleManualRefresh = () => {
@@ -181,9 +194,20 @@ const PublicKds = () => {
                   <ul className="space-y-3 mb-6 min-h-[120px]">
                     {order.items.map((item: any, idx: number) => (
                       <li key={idx} className="flex justify-between items-start border-b border-gray-100 pb-3 last:border-0">
-                        <div className="flex gap-3">
-                          <span className="font-bold text-gray-900 min-w-[24px]">{item.quantity}x</span>
-                          <span className="font-medium text-gray-700">{item.dishName}</span>
+                        <div className="flex gap-3 items-center">
+                          <button
+                            onClick={() => toggleItemStatus(order._id, idx)}
+                            className={`w-4 h-4 rounded-full flex-shrink-0 transition-colors ${
+                              completedItems[`${order._id}-${idx}`] ? 'bg-green-500' : 'bg-red-500'
+                            }`}
+                            title={completedItems[`${order._id}-${idx}`] ? "Mark as uncooked" : "Mark as cooked"}
+                          />
+                          <div className="flex gap-3">
+                            <span className="font-bold text-gray-900 min-w-[24px]">{item.quantity}x</span>
+                            <span className={`font-medium ${completedItems[`${order._id}-${idx}`] ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                              {item.dishName}
+                            </span>
+                          </div>
                         </div>
                       </li>
                     ))}
