@@ -34,6 +34,9 @@ export default function Inventory() {
   const [submitting, setSubmitting] = useState(false)
   const [checkSummary, setCheckSummary] = useState<any>(null)
   
+  const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false)
+  const [displayPrefs, setDisplayPrefs] = useState({ weight: 'g', volume: 'ml' })
+  
   // Inline restock states
   const [inlineQuantities, setInlineQuantities] = useState<Record<string, string>>({})
   const [inlineUnits, setInlineUnits] = useState<Record<string, string>>({})
@@ -134,6 +137,31 @@ export default function Inventory() {
     return 1
   }
 
+  const formatDisplayUnit = (val: number, unit: string) => {
+    let displayVal = val;
+    let displayUnit = unit;
+    
+    const u = unit?.toLowerCase() || '';
+    if (u === 'g' && displayPrefs.weight === 'kg') {
+      displayVal = val / 1000;
+      displayUnit = 'kg';
+    } else if (u === 'kg' && displayPrefs.weight === 'g') {
+      displayVal = val * 1000;
+      displayUnit = 'g';
+    } else if (u === 'ml' && displayPrefs.volume === 'l') {
+      displayVal = val / 1000;
+      displayUnit = 'l';
+    } else if (u === 'l' && displayPrefs.volume === 'ml') {
+      displayVal = val * 1000;
+      displayUnit = 'ml';
+    }
+
+    return {
+      val: parseFloat(displayVal.toFixed(3)),
+      unit: displayUnit
+    };
+  };
+
   // Calculated dynamic statistics
   const totalIngredients = ingredients.length
   const lowStockCount = ingredients.filter(i => i.currentStock > 0 && i.currentStock <= i.minimumStock).length
@@ -141,8 +169,20 @@ export default function Inventory() {
   const totalStockValue = ingredients.reduce((sum, i) => sum + (Math.max(0, i.currentStock) * getMultiplier(i.unit) * (i.averageCost || 0)), 0)
 
   const selectedIngredient = ingredients.find(i => i.name.toLowerCase() === ingredientNameInput.toLowerCase().trim())
-  const currentStockText = selectedIngredient ? `${selectedIngredient.currentStock} ${selectedIngredient.unit}` : '--'
-  const afterStockText = selectedIngredient && quantity ? `${selectedIngredient.currentStock + Number(quantity)} ${selectedIngredient.unit}` : (quantity ? `${quantity} units` : '--')
+  
+  let currentStockText = '--'
+  let afterStockText = '--'
+  if (selectedIngredient) {
+    const curDisp = formatDisplayUnit(selectedIngredient.currentStock, selectedIngredient.unit)
+    currentStockText = `${curDisp.val} ${curDisp.unit}`
+    
+    if (quantity) {
+      const afterDisp = formatDisplayUnit(selectedIngredient.currentStock + Number(quantity), selectedIngredient.unit)
+      afterStockText = `${afterDisp.val} ${afterDisp.unit}`
+    }
+  } else if (quantity) {
+    afterStockText = `${quantity} units`
+  }
 
   const handleAddStock = async () => {
     if (!ingredientNameInput || !quantity) {
@@ -291,8 +331,52 @@ export default function Inventory() {
           </CardContent>
         </Card>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
+        <div className="flex items-center gap-2">
+          <Dialog open={isUnitDialogOpen} onOpenChange={setIsUnitDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="bg-white shadow-sm">
+                Unit Preferences
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Display Preferences</DialogTitle>
+                <DialogDescription>
+                  Choose how units should be displayed across the inventory.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Weight Unit</Label>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={displayPrefs.weight}
+                    onChange={(e) => setDisplayPrefs(prev => ({ ...prev, weight: e.target.value }))}
+                  >
+                    <option value="g">Grams (g)</option>
+                    <option value="kg">Kilograms (kg)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Volume Unit</Label>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={displayPrefs.volume}
+                    onChange={(e) => setDisplayPrefs(prev => ({ ...prev, volume: e.target.value }))}
+                  >
+                    <option value="ml">Milliliters (ml)</option>
+                    <option value="l">Liters (l)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button onClick={() => setIsUnitDialogOpen(false)}>Done</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
             <Button className="shadow-sm" onClick={() => {
               setIngredientNameInput('');
               setQuantity('');
@@ -399,6 +483,7 @@ export default function Inventory() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {checkSummary && !checkSummary.snoozedUntil && (checkSummary.summary.due > 0 || checkSummary.summary.overdue > 0) && (
@@ -526,11 +611,13 @@ export default function Inventory() {
                 </TableRow>
               ) : filteredInventory.map((item) => {
                 const status = getStatus(item)
+                const currentDisplay = formatDisplayUnit(item.currentStock, item.unit)
+                const minDisplay = formatDisplayUnit(item.minimumStock, item.unit)
                 return (
                   <TableRow key={item._id} className="hover:bg-gray-50/50 transition-colors">
                     <TableCell className="pl-6 font-medium text-gray-900">{item.name}</TableCell>
-                    <TableCell className="font-bold text-gray-900">{item.currentStock} {item.unit}</TableCell>
-                    <TableCell className="text-gray-500">{item.minimumStock} {item.unit}</TableCell>
+                    <TableCell className="font-bold text-gray-900">{currentDisplay.val} {currentDisplay.unit}</TableCell>
+                    <TableCell className="text-gray-500">{minDisplay.val} {minDisplay.unit}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={`
                         ${status === 'Healthy' ? 'bg-green-50 text-green-700 border-green-200' : ''}
