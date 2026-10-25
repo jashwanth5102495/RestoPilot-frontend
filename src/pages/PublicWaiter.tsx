@@ -45,13 +45,18 @@ const PublicWaiter = () => {
       setRestaurantName(rest?.name || 'MYSTERY FAMILY RESTAURANT');
       setTables(tablesRes.data.data.tables || []);
       
+      const activeCats = menuRes.data.data.categories || [];
+      const activeCatNames = activeCats.map((c: any) => c.name);
+      const activeCatIds = new Set(activeCats.map((c: any) => c._id?.toString()));
+
       const allDishes = menuRes.data.data.dishes || [];
-      setDishes(allDishes);
-      
-      const serverCats = (menuRes.data.data.categories || []).map((c: any) => c.name);
-      const dishCats = allDishes.map((d: any) => (typeof d.categoryId === 'object' ? d.categoryId?.name : d.categoryId) || 'Uncategorized');
-      const uniqueCats = Array.from(new Set([...serverCats, ...dishCats])).filter(Boolean);
-      setCategories(['All', ...uniqueCats]);
+      const activeDishes = allDishes.filter((d: any) => {
+        const catId = typeof d.categoryId === 'object' ? d.categoryId?._id?.toString() : d.categoryId?.toString();
+        return !catId || activeCatIds.has(catId);
+      });
+
+      setDishes(activeDishes);
+      setCategories(['All', ...activeCatNames]);
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || err.message || 'Failed to load Waiter Portal');

@@ -43,8 +43,8 @@ export default function Billing() {
     const fetchData = async () => {
       try {
         const [catsRes, dishesRes, authRes] = await Promise.all([
-          api.get('/categories'),
-          api.get('/dishes'),
+          api.get('/categories?activeOnly=true'),
+          api.get('/dishes?activeCategoriesOnly=true'),
           api.get('/auth/me')
         ])
         setCategories([{ _id: 'All', name: 'All' }, ...catsRes.data.data])
