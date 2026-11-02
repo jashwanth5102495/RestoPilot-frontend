@@ -2,12 +2,7 @@ import axios, { AxiosError } from 'axios';
 
 export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && window.location.hostname) {
-    const host = window.location.hostname;
-    const protocol = window.location.protocol;
-    return `${protocol}//${host}:5000/api/v1`;
-  }
-  return 'http://localhost:5000/api/v1';
+  return 'https://restopilot-backend-production-cf5e.up.railway.app/api/v1';
 };
 
 const API_URL = getApiBaseUrl();

@@ -5,9 +5,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2, UtensilsCrossed, RefreshCw, Globe, MapPin, Phone, User, Printer, QrCode } from "lucide-react"
+import { Search, Plus, Minus, Trash2, CreditCard, Banknote, Smartphone, ShoppingBag, Loader2, UtensilsCrossed, RefreshCw, Globe, MapPin, Phone, User, Printer, QrCode, CupSoda, History } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { printReceipt } from '@/lib/printReceipt'
+import HistoryTab from '@/components/billing/HistoryTab'
+import DrinksTab from '@/components/billing/DrinksTab'
 
 type CartItem = {
   dish: any
@@ -28,7 +30,7 @@ export default function PublicBilling() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'CARD'>('CASH')
 
-  const [activeTab, setActiveTab] = useState<'FAST_BILLING' | 'TABLES' | 'ONLINE' | 'QR_TABLES'>('FAST_BILLING')
+  const [activeTab, setActiveTab] = useState<'FAST_BILLING' | 'TABLES' | 'ONLINE' | 'QR_TABLES' | 'DRINKS' | 'HISTORY'>('FAST_BILLING')
   const [tables, setTables] = useState<any[]>([])
   const [activeOrders, setActiveOrders] = useState<any[]>([])
   const [selectedTable, setSelectedTable] = useState<any>(null)
@@ -482,6 +484,32 @@ export default function PublicBilling() {
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => setActiveTab('DRINKS')}
+          className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
+            activeTab === 'DRINKS' 
+              ? 'bg-primary/10 text-primary scale-110' 
+              : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+          }`}
+          title="Drinks & Inventory"
+        >
+          <CupSoda className="w-6 h-6" />
+          <span className="text-[10px] font-bold">Drinks</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('HISTORY')}
+          className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
+            activeTab === 'HISTORY' 
+              ? 'bg-primary/10 text-primary scale-110' 
+              : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+          }`}
+          title="Bill History & Receipts"
+        >
+          <History className="w-6 h-6" />
+          <span className="text-[10px] font-bold">History</span>
+        </button>
       </aside>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -490,7 +518,7 @@ export default function PublicBilling() {
            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             {restaurantData?.name} 
           </h1>
-          <div className="flex gap-1.5 bg-gray-100 p-1 rounded-lg">
+          <div className="flex gap-1.5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
             <button 
               onClick={() => setActiveTab('FAST_BILLING')}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeTab === 'FAST_BILLING' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
@@ -525,6 +553,18 @@ export default function PublicBilling() {
                 </span>
               )}
             </button>
+            <button 
+              onClick={() => setActiveTab('DRINKS')}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeTab === 'DRINKS' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-500'}`}
+            >
+              Drinks
+            </button>
+            <button 
+              onClick={() => setActiveTab('HISTORY')}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeTab === 'HISTORY' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-500'}`}
+            >
+              History
+            </button>
           </div>
         </header>
         
@@ -538,7 +578,11 @@ export default function PublicBilling() {
                   ? 'Table Bills Management' 
                   : activeTab === 'QR_TABLES'
                     ? 'Customer QR Orders Management'
-                    : 'Online Orders Management'}
+                    : activeTab === 'ONLINE'
+                      ? 'Online Orders Management'
+                      : activeTab === 'DRINKS'
+                        ? 'Drinks Point of Sale & Inventory'
+                        : 'Bill History & Receipts'}
             </p>
           </div>
           <div className="flex gap-2 bg-gray-100 p-1.5 rounded-xl">
@@ -576,11 +620,28 @@ export default function PublicBilling() {
                 </span>
               )}
             </button>
+            <button 
+              onClick={() => setActiveTab('DRINKS')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'DRINKS' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Drinks
+            </button>
+            <button 
+              onClick={() => setActiveTab('HISTORY')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'HISTORY' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              History
+            </button>
           </div>
         </header>
 
         <div className="flex-1 p-4 md:p-6 overflow-y-auto">
-          <div className="h-full flex flex-col lg:flex-row gap-6 max-w-[1600px] mx-auto min-h-[600px]">
+          {activeTab === 'DRINKS' ? (
+            <DrinksTab slug={slug!} restaurantData={restaurantData} />
+          ) : activeTab === 'HISTORY' ? (
+            <HistoryTab slug={slug!} restaurantData={restaurantData} />
+          ) : (
+            <div className="h-full flex flex-col lg:flex-row gap-6 max-w-[1600px] mx-auto min-h-[600px]">
           
           {activeTab === 'FAST_BILLING' ? (
             <div className="flex-1 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -1258,8 +1319,9 @@ export default function PublicBilling() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
-    </div>
+  </div>
   )
 }
