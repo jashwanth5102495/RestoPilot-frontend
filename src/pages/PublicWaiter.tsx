@@ -6,6 +6,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast';
 import { Loader2, RefreshCw, ArrowLeft, ShoppingCart, Search, Minus, Plus } from 'lucide-react';
+import { getDishImage } from '../lib/dishImages';
 
 const PublicWaiter = () => {
   const params = useParams<{ slug?: string }>();
@@ -278,16 +279,78 @@ const PublicWaiter = () => {
                   </Button>
                 ))}
               </div>
-              <div className="flex-1 overflow-y-auto p-3 md:p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-                {filteredDishes.map(dish => (
-                  <Card key={dish._id} className="cursor-pointer hover:border-primary transition-colors flex flex-col shadow-sm" onClick={() => addToCart(dish)}>
-                    <div className="h-24 md:h-32 bg-gray-100 w-full rounded-t-xl bg-cover bg-center" style={{ backgroundImage: `url(${dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'})`}}></div>
-                    <CardContent className="p-3 flex flex-col flex-1">
-                      <h3 className="font-semibold text-gray-900 leading-tight mb-1 text-sm md:text-base">{dish.name}</h3>
-                      <p className="text-primary font-bold mt-auto text-sm md:text-base">₹{dish.price}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="flex-1 overflow-y-auto p-3 md:p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 auto-rows-max content-start">
+                {filteredDishes.map(dish => {
+                  const cartItem = cart.find(item => item.dishId === dish._id);
+                  const qty = cartItem ? cartItem.quantity : 0;
+
+                  return (
+                    <Card 
+                      key={dish._id} 
+                      className={`cursor-pointer transition-all flex flex-col shadow-sm rounded-xl border shrink-0 min-h-[170px] md:min-h-[210px] ${
+                        qty > 0 
+                          ? 'border-rose-400 ring-2 ring-rose-500/20 bg-rose-50/10' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`} 
+                      onClick={() => {
+                        if (qty === 0) {
+                          addToCart(dish);
+                        }
+                      }}
+                    >
+                      <div 
+                        className="relative h-24 md:h-32 shrink-0 bg-gray-100 w-full rounded-t-xl bg-cover bg-center" 
+                        style={{ backgroundImage: `url(${getDishImage(dish)})` }}
+                      >
+                        {qty > 0 && (
+                          <div 
+                            className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 w-[85%] max-w-[130px] z-10"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-between bg-[#d3455b] hover:bg-[#c2374d] text-white rounded-xl px-2 py-1 shadow-md font-bold select-none border border-white/20 transition-all">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateQuantity(dish._id, -1);
+                                }}
+                                className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center hover:bg-black/20 rounded-lg active:scale-90 transition-transform font-bold text-white"
+                                title="Decrease"
+                              >
+                                <Minus className="w-3.5 h-3.5 stroke-[3]" />
+                              </button>
+                              <span className="font-extrabold text-sm md:text-base px-1 text-white">
+                                {qty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateQuantity(dish._id, 1);
+                                }}
+                                className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center hover:bg-black/20 rounded-lg active:scale-90 transition-transform font-bold text-white"
+                                title="Increase"
+                              >
+                                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className={`p-3 flex flex-col flex-1 ${qty > 0 ? 'pt-5' : ''}`}>
+                        <h3 className="font-semibold text-gray-900 leading-tight mb-1 text-sm md:text-base">{dish.name}</h3>
+                        <div className="flex items-center justify-between mt-auto pt-2">
+                          <p className="text-primary font-bold text-sm md:text-base">₹{dish.price}</p>
+                          {qty === 0 && (
+                            <span className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-md border border-gray-200">
+                              + ADD
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
 

@@ -114,7 +114,7 @@ export default function Notifications() {
                     <li>Open Telegram and search for <strong>@userinfobot</strong> or <strong>@raw_data_bot</strong></li>
                     <li>Send the message <code>/start</code></li>
                     <li>The bot will reply with your Account Info. Copy the <strong>Id</strong> (usually a 9 or 10 digit number)</li>
-                    <li>Make sure you have also searched for and started a conversation with your System's main Telegram Bot!</li>
+                    <li>IMPORTANT: Open Telegram, search for our bot <strong>@rest_blu_bot</strong>, and press <strong>START</strong> (or send <code>/start</code>). Telegram requires you to start the bot before it can send you reports.</li>
                   </ol>
                 </div>
 

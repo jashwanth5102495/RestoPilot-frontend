@@ -1144,6 +1144,8 @@ export default function DrinksTab({ slug, restaurantData, onBillGenerated }: Dri
                     onChange={(e) => setFormCategory(e.target.value)}
                     className="w-full h-9 px-2 text-xs border border-gray-300 rounded-md bg-white text-gray-800"
                   >
+                    <option value="Beer">Beer</option>
+                    <option value="Spirits">Spirits</option>
                     <option value="Cold Drinks">Cold Drinks</option>
                     <option value="Energy Drinks">Energy Drinks</option>
                     <option value="Water">Water</option>
@@ -1554,3 +1556,4 @@ export default function DrinksTab({ slug, restaurantData, onBillGenerated }: Dri
     </div>
   )
 }
+
