@@ -51,6 +51,8 @@ export default function PublicBilling() {
   const [customerPhone, setCustomerPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
   const prevBillRequestsRef = useRef<Set<string>>(new Set())
+  const isSubmittingRef = useRef(false)
+  const lastSubmitTimeRef = useRef(0)
 
   const fetchOnlineOrders = async (silent = false) => {
     try {
@@ -176,12 +178,17 @@ export default function PublicBilling() {
     const order = activeOrders.find(o => o.tableId === selectedTable._id)
     if (!order || order.billRequestStatus !== 'REQUESTED') return
 
+    const now = Date.now()
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return
+    isSubmittingRef.current = true
+    lastSubmitTimeRef.current = now
+
     setIsProcessing(true)
     try {
       const res = await api.post(`/public/billing/${slug}/tables/${selectedTable._id}/generate-bill`)
       toast({ title: 'Bill Generated', description: 'The waiter can now settle the bill.' })
       
-      // Optional: auto-print the receipt
+      // Auto-print receipt on first bill generation
       if (res.data?.data) {
         printReceipt(res.data.data, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
       }
@@ -191,6 +198,7 @@ export default function PublicBilling() {
       toast({ title: 'Error generating bill', description: err.response?.data?.message || 'Please try again', variant: 'destructive' })
     } finally {
       setIsProcessing(false)
+      setTimeout(() => { isSubmittingRef.current = false }, 1000)
     }
   }
 
@@ -232,9 +240,15 @@ export default function PublicBilling() {
 
   const handleGenerateBill = async () => {
     if (cart.length === 0) return
+    const now = Date.now()
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return
+    isSubmittingRef.current = true
+    lastSubmitTimeRef.current = now
+
     setIsProcessing(true)
     
     try {
+      const idempotencyKey = `${slug}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
       const items = cart.map(item => ({
         dishId: item.dish._id,
         quantity: item.quantity
@@ -244,12 +258,13 @@ export default function PublicBilling() {
         items,
         paymentMethod,
         expectedTotal: Number(total.toFixed(2)),
-        customerId: null // Currently unauthenticated
+        customerId: null,
+        idempotencyKey
       }
 
       const response = await api.post(`/public/billing/${slug}/sale`, payload)
 
-      const billNumber = response.data.data.bill.billNumber
+      const billNumber = response.data.data.bill?.billNumber || response.data.data.order?.orderNumber
       toast({
         title: "Bill generated successfully",
         description: `Order ${billNumber} completed via ${paymentMethod}.`,
@@ -289,11 +304,20 @@ export default function PublicBilling() {
       }
     } finally {
       setIsProcessing(false)
+      setTimeout(() => { isSubmittingRef.current = false }, 1000)
     }
   }
 
   const handleSettleTable = async () => {
     if (!selectedTable) return
+    const order = getTableOrder(selectedTable._id)
+    const billAlreadyPrinted = order?.billRequestStatus === 'APPROVED'
+
+    const now = Date.now()
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return
+    isSubmittingRef.current = true
+    lastSubmitTimeRef.current = now
+
     setIsProcessing(true)
     try {
       const res = await api.post(`/public/billing/${slug}/tables/${selectedTable._id}/settle`, {
@@ -303,7 +327,10 @@ export default function PublicBilling() {
         title: "Table Settled",
         description: `Order for ${selectedTable.name} completed successfully.`,
       })
-      printReceipt(res.data.data, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
+      // Only auto-print upon settlement if it was NOT already printed during "Generate Bill for Waiter"
+      if (!billAlreadyPrinted) {
+        printReceipt(res.data.data, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
+      }
       setSelectedTable(null)
       refreshTables()
     } catch (err: any) {
@@ -314,6 +341,7 @@ export default function PublicBilling() {
       })
     } finally {
       setIsProcessing(false)
+      setTimeout(() => { isSubmittingRef.current = false }, 1000)
     }
   }
 
@@ -340,6 +368,11 @@ export default function PublicBilling() {
 
   const handleSettleOnlineOrder = async () => {
     if (!selectedOnlineOrder) return
+    const now = Date.now()
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return
+    isSubmittingRef.current = true
+    lastSubmitTimeRef.current = now
+
     setIsProcessing(true)
     try {
       const res = await api.post(`/public/billing/${slug}/online-orders/${selectedOnlineOrder._id}/settle`, {
@@ -360,11 +393,17 @@ export default function PublicBilling() {
       })
     } finally {
       setIsProcessing(false)
+      setTimeout(() => { isSubmittingRef.current = false }, 1000)
     }
   }
 
   const handleSettleQrOrder = async () => {
     if (!selectedQrOrder) return
+    const now = Date.now()
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return
+    isSubmittingRef.current = true
+    lastSubmitTimeRef.current = now
+
     setIsProcessing(true)
     try {
       const res = await api.post(`/public/billing/${slug}/qr-table-orders/${selectedQrOrder._id}/settle`, { paymentMethod })
@@ -374,7 +413,10 @@ export default function PublicBilling() {
       fetchQrTableOrders(true)
     } catch (err: any) {
       toast({ title: "Failed to settle QR order", description: err.response?.data?.message || 'Error', variant: 'destructive' })
-    } finally { setIsProcessing(false) }
+    } finally { 
+      setIsProcessing(false)
+      setTimeout(() => { isSubmittingRef.current = false }, 1000)
+    }
   }
 
   const handleUpdateOnlineStatus = async (status: string) => {
@@ -1243,9 +1285,25 @@ export default function PublicBilling() {
                         {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generate Bill for Waiter'}
                       </Button>
                     ) : (
-                      <Button className="w-full font-semibold text-base shadow-md" onClick={handleSettleTable} disabled={!selectedTable || isProcessing}>
-                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Settle Table Bill'}
-                      </Button>
+                      <>
+                        <Button className="w-full font-semibold text-base shadow-md" onClick={handleSettleTable} disabled={!selectedTable || isProcessing}>
+                          {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Settle Table Bill'}
+                        </Button>
+                        {selectedTable && getTableOrder(selectedTable._id) && (
+                          <Button 
+                            variant="outline" 
+                            className="w-full gap-2 text-gray-700" 
+                            onClick={() => {
+                              const order = getTableOrder(selectedTable._id)
+                              if (order) {
+                                printReceipt(order, restaurantData?.name, restaurantData?.address, restaurantData?.phone, restaurantData?.gstNumber)
+                              }
+                            }}
+                          >
+                            <Printer className="w-4 h-4" /> Print / Reprint Bill
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 ) : activeTab === 'QR_TABLES' ? (

@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useToast } from '../hooks/use-toast';
-import { Loader2, RefreshCw, ArrowLeft, ShoppingCart, Search, Minus, Plus } from 'lucide-react';
-import { getDishImage } from '../lib/dishImages';
+import { Loader2, RefreshCw, ArrowLeft, ShoppingCart, Search, Minus, Plus, Mic } from 'lucide-react';
+import { getDishImage, getCategoryFallbackImage } from '../lib/dishImages';
+import VoiceOrderModal from '../components/waiter/VoiceOrderModal';
 
 const PublicWaiter = () => {
   const params = useParams<{ slug?: string }>();
@@ -29,6 +30,9 @@ const PublicWaiter = () => {
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [showBillDialog, setShowBillDialog] = useState(false);
   const [billLoading, setBillLoading] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const lastSubmitTimeRef = useRef(0);
 
   useEffect(() => {
     fetchInitialData();
@@ -124,6 +128,11 @@ const PublicWaiter = () => {
 
   const placeOrder = async () => {
     if (cart.length === 0 || !activeTable) return;
+    const now = Date.now();
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return;
+    isSubmittingRef.current = true;
+    lastSubmitTimeRef.current = now;
+
     setOrderLoading(true);
     try {
       const items = cart.map(item => ({
@@ -146,11 +155,17 @@ const PublicWaiter = () => {
       toast({ title: 'Failed to send order', description: err.response?.data?.message, variant: 'destructive' });
     } finally {
       setOrderLoading(false);
+      setTimeout(() => { isSubmittingRef.current = false; }, 1000);
     }
   };
 
   const requestBill = async () => {
     if (!activeTable || !existingOrder || billLoading) return;
+    const now = Date.now();
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return;
+    isSubmittingRef.current = true;
+    lastSubmitTimeRef.current = now;
+
     setBillLoading(true);
     try {
       await api.post(`/public/waiter/${slug}/tables/${activeTable._id}/bill`);
@@ -161,11 +176,52 @@ const PublicWaiter = () => {
       toast({ title: 'Request failed', description: err.response?.data?.message || 'Please try again.', variant: 'destructive' });
     } finally {
       setBillLoading(false);
+      setTimeout(() => { isSubmittingRef.current = false; }, 1000);
+    }
+  };
+
+  const handleVoiceOrderConfirm = async (voiceItems: { dishId: string; quantity: number; notes?: string }[]) => {
+    if (!activeTable || voiceItems.length === 0) return;
+    const now = Date.now();
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return;
+    isSubmittingRef.current = true;
+    lastSubmitTimeRef.current = now;
+
+    setOrderLoading(true);
+    try {
+      const items = voiceItems.map(item => ({
+        dishId: item.dishId,
+        quantityChange: item.quantity,
+        notes: item.notes || 'Voice Order'
+      }));
+      await api.post(`/public/waiter/${slug}/tables/${activeTable._id}/order`, { items });
+      toast({ 
+        title: 'Order sent to Kitchen!', 
+        description: `${voiceItems.reduce((a, b) => a + b.quantity, 0)} dish(es) placed via voice order.` 
+      });
+      setCart([]);
+      fetchTables();
+      
+      try {
+        const res = await api.get(`/public/waiter/${slug}/tables/${activeTable._id}/order`);
+        setExistingOrder(res.data.data || null);
+      } catch (e) {}
+    } catch (err: any) {
+      toast({ title: 'Failed to send order', description: err.response?.data?.message || 'Error', variant: 'destructive' });
+      throw err;
+    } finally {
+      setOrderLoading(false);
+      setTimeout(() => { isSubmittingRef.current = false; }, 1000);
     }
   };
 
   const settleBill = async (paymentMethod: 'CASH' | 'ONLINE') => {
     if (!activeTable || !existingOrder || billLoading) return;
+    const now = Date.now();
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return;
+    isSubmittingRef.current = true;
+    lastSubmitTimeRef.current = now;
+
     setBillLoading(true);
     try {
       await api.post(`/public/waiter/${slug}/tables/${activeTable._id}/settle`, { paymentMethod });
@@ -179,6 +235,7 @@ const PublicWaiter = () => {
       toast({ title: 'Settle failed', description: err.response?.data?.message || 'Please try again.', variant: 'destructive' });
     } finally {
       setBillLoading(false);
+      setTimeout(() => { isSubmittingRef.current = false; }, 1000);
     }
   };
 
@@ -240,6 +297,12 @@ const PublicWaiter = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
             <h2 className="text-xl font-bold">{activeTable.name || `Table ${activeTable.tableNumber}`} Order</h2>
             <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => setShowVoiceModal(true)} 
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold gap-2 shadow-sm"
+              >
+                <Mic className="w-4 h-4 animate-pulse" /> Voice Order
+              </Button>
               <Button onClick={refreshOrder} variant="outline" title="Refresh Order" className="px-3 border-gray-300">
                 <RefreshCw className="w-4 h-4 text-gray-700" />
               </Button>
@@ -261,8 +324,16 @@ const PublicWaiter = () => {
                     placeholder="Search dish name..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 h-9 text-sm"
+                    className="pl-9 pr-10 h-9 text-sm"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowVoiceModal(true)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-orange-50 text-orange-600 transition-colors"
+                    title="Voice Order"
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
@@ -298,10 +369,18 @@ const PublicWaiter = () => {
                         }
                       }}
                     >
-                      <div 
-                        className="relative h-24 md:h-32 shrink-0 bg-gray-100 w-full rounded-t-xl bg-cover bg-center" 
-                        style={{ backgroundImage: `url(${getDishImage(dish)})` }}
-                      >
+                      <div className="relative h-24 md:h-32 shrink-0 bg-gray-100 w-full rounded-t-xl">
+                        <img
+                          src={getDishImage(dish)}
+                          alt={dish.name}
+                          loading="lazy"
+                          className="w-full h-full object-cover rounded-t-xl transition-transform duration-300 hover:scale-105"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.onerror = null;
+                            target.src = getCategoryFallbackImage(getDishCategoryName(dish));
+                          }}
+                        />
                         {qty > 0 && (
                           <div 
                             className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 w-[85%] max-w-[130px] z-10"
@@ -453,6 +532,28 @@ const PublicWaiter = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Mobile Floating Mic Button */}
+      {activeTable && (
+        <button
+          type="button"
+          onClick={() => setShowVoiceModal(true)}
+          className="fixed bottom-6 right-6 lg:hidden z-40 w-14 h-14 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-2xl flex items-center justify-center active:scale-95 transition-transform border-2 border-white/30"
+          title="Voice Order"
+        >
+          <Mic className="w-6 h-6 animate-pulse" />
+        </button>
+      )}
+
+      {showVoiceModal && activeTable && (
+        <VoiceOrderModal
+          isOpen={showVoiceModal}
+          onClose={() => setShowVoiceModal(false)}
+          activeTable={activeTable}
+          dishes={dishes}
+          onConfirmOrder={handleVoiceOrderConfirm}
+        />
       )}
 
       {showBillDialog && (

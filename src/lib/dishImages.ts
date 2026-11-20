@@ -1,24 +1,37 @@
 /**
  * Dish image resolver utility
- * Maps dishes to their distinct, lightweight, optimized local images in /dished/
- * Guaranteed to never return broken placeholders or the generic salad image.
+ * Maps dishes to their distinct, lightweight, compressed local images in /dishes/compressed/
+ * (sourced from /dishes/Compressed Restaurant Images 1/Compressed Restaurant Images/)
+ * Guaranteed to match exact dishes, load instantly without fluctuations, and avoid generic placeholders.
  */
 
+const SPECIAL_DISH_MAP: Record<string, string> = {
+  'chicken-urrbadu': 'chicken-hurbadu.webp',
+  'chaklli-chicken-daba-special': 'chaklli-chicken.webp',
+  'monster': 'monster-energy-drink.webp',
+  'sambje-melone': 'mix-veg-curry.webp',
+  'chinese-special-chef-special': 'chicken-manchurian.webp',
+  'mushroom-duplex-chef-special': 'mushroom-duplex-mystery-special.webp',
+};
+
 export function toDishSlug(name: string): string {
-  if (!name) return 'default-dish';
-  return name
+  if (!name) return 'chicken-biriyani';
+  let slug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+  
+  // Standardize biryani -> biriyani
+  slug = slug.replace(/biryani/g, 'biriyani');
+  return slug;
 }
 
 /**
- * Returns the local image path for a dish.
- * Guarantees no generic salad placeholder (photo-1546069901-ba9599a7e63c).
+ * Returns the compressed webp image path for a dish.
  */
 export function getDishImage(dish: { name?: string; image?: string; category?: string } | null | undefined): string {
   if (!dish || !dish.name) {
-    return '/dished/biryani.jpg';
+    return '/dishes/compressed/chicken-biriyani.webp';
   }
 
   // If dish has a valid custom image that is NOT the generic placeholder
@@ -32,7 +45,11 @@ export function getDishImage(dish: { name?: string; image?: string; category?: s
   }
 
   const slug = toDishSlug(dish.name);
-  return `/dished/${slug}.jpg`;
+  if (SPECIAL_DISH_MAP[slug]) {
+    return `/dishes/compressed/${SPECIAL_DISH_MAP[slug]}`;
+  }
+
+  return `/dishes/compressed/${slug}.webp`;
 }
 
 /**
@@ -40,19 +57,17 @@ export function getDishImage(dish: { name?: string; image?: string; category?: s
  */
 export function getCategoryFallbackImage(category?: string): string {
   const c = (category || '').toLowerCase();
-  if (c.includes('biryani') || c.includes('biriyani')) return '/dished/biryani.jpg';
-  if (c.includes('rice')) return '/dished/fried-rice.jpg';
-  if (c.includes('bread')) return '/dished/naan.jpg';
-  if (c.includes('mutton')) return '/dished/mutton-roast.jpg';
-  if (c.includes('sea food') || c.includes('fish') || c.includes('prawn')) return '/dished/fish-fry.jpg';
-  if (c.includes('tandoor non') || c.includes('chicken non')) return '/dished/tandoori-chicken.jpg';
-  if (c.includes('curry non')) return '/dished/butter-chicken.jpg';
-  if (c.includes('curry veg')) return '/dished/paneer-curry.jpg';
-  if (c.includes('tandoor veg') || c.includes('chinese veg')) return '/dished/paneer-tikka.jpg';
-  if (c.includes('shake')) return '/dished/milkshake.jpg';
-  if (c.includes('mocktail')) return '/dished/mocktail.jpg';
-  if (c.includes('alcohol') || c.includes('beverage')) return '/dished/beer.jpg';
-  if (c.includes('dessert')) return '/dished/brownie-dessert.jpg';
-  if (c.includes('breakfast')) return '/dished/omelette.jpg';
-  return '/dished/chicken-starter.jpg';
+  if (c.includes('biryani') || c.includes('biriyani')) return '/dishes/compressed/chicken-biriyani.webp';
+  if (c.includes('rice')) return '/dishes/compressed/veg-fried-rice.webp';
+  if (c.includes('bread') || c.includes('roti') || c.includes('naan')) return '/dishes/compressed/butter-naan.webp';
+  if (c.includes('mutton')) return '/dishes/compressed/mutton-curry.webp';
+  if (c.includes('sea food') || c.includes('fish') || c.includes('prawn')) return '/dishes/compressed/fish-curry.webp';
+  if (c.includes('tandoor non') || c.includes('chicken non')) return '/dishes/compressed/chicken-tikka.webp';
+  if (c.includes('curry non')) return '/dishes/compressed/chicken-butter-masala.webp';
+  if (c.includes('curry veg')) return '/dishes/compressed/mix-veg-curry.webp';
+  if (c.includes('tandoor veg') || c.includes('chinese veg')) return '/dishes/compressed/paneer-tikka.webp';
+  if (c.includes('shake')) return '/dishes/compressed/chocolate-shake.webp';
+  if (c.includes('alcohol') || c.includes('beverage')) return '/dishes/compressed/beer.webp';
+  if (c.includes('ice cream') || c.includes('dessert')) return '/dishes/compressed/sizzling-brownie.webp';
+  return '/dishes/compressed/chicken-kabab.webp';
 }

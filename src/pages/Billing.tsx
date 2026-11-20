@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,8 @@ export default function Billing() {
   const [dishes, setDishes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
+  const isSubmittingRef = useRef(false)
+  const lastSubmitTimeRef = useRef(0)
   const [activeCategory, setActiveCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
@@ -107,9 +109,15 @@ export default function Billing() {
 
   const handleGenerateBill = async () => {
     if (cart.length === 0) return
+    const now = Date.now()
+    if (isSubmittingRef.current || now - lastSubmitTimeRef.current < 1500) return
+    isSubmittingRef.current = true
+    lastSubmitTimeRef.current = now
+
     setIsProcessing(true)
     
     try {
+      const idempotencyKey = `admin-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
       const items = cart.map(item => ({
         dishId: item.dish._id,
         quantity: item.quantity
@@ -119,14 +127,15 @@ export default function Billing() {
         items,
         paymentMethod,
         expectedTotal: Number(total.toFixed(2)),
-        customerInfo: {}
+        customerInfo: {},
+        idempotencyKey
       }
       if (customerName) payload.customerInfo.name = customerName;
       if (customerPhone) payload.customerInfo.phone = customerPhone;
 
       const response = await api.post('/billing/sale', payload)
 
-      const billNumber = response.data.data.bill.billNumber
+      const billNumber = response.data.data.bill?.billNumber || response.data.data.order?.orderNumber
       toast({
         title: "Bill generated successfully",
         description: `Order ${billNumber} completed via ${paymentMethod}.`,
@@ -169,6 +178,7 @@ export default function Billing() {
       }
     } finally {
       setIsProcessing(false)
+      setTimeout(() => { isSubmittingRef.current = false }, 1000)
     }
   }
 

@@ -78,6 +78,8 @@ export default function DrinksTab({ slug, restaurantData, onBillGenerated }: Dri
   const [discountAmount, setDiscountAmount] = useState<number>(0)
   const [taxRate, setTaxRate] = useState<number>(5) // 5% GST by default (2.5% CGST + 2.5% SGST)
   const [isProcessingSale, setIsProcessingSale] = useState(false)
+  const isSubmittingSaleRef = useRef(false)
+  const lastSaleSubmitTimeRef = useRef(0)
 
   // Modals state
   const [isAddDrinkModalOpen, setIsAddDrinkModalOpen] = useState(false)
@@ -259,9 +261,15 @@ export default function DrinksTab({ slug, restaurantData, onBillGenerated }: Dri
   // Handle Bill Generation & Print
   const handleGenerateAndPrintBill = async () => {
     if (cart.length === 0) return
+    const now = Date.now()
+    if (isSubmittingSaleRef.current || now - lastSaleSubmitTimeRef.current < 1500) return
+    isSubmittingSaleRef.current = true
+    lastSaleSubmitTimeRef.current = now
+
     setIsProcessingSale(true)
 
     try {
+      const idempotencyKey = `drink-${slug}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
       const payload = {
         items: cart.map(item => ({
           drinkId: item.drinkId.startsWith('custom-') ? undefined : item.drinkId,
@@ -282,7 +290,8 @@ export default function DrinksTab({ slug, restaurantData, onBillGenerated }: Dri
           name: customerName.trim(),
           phone: customerPhone.trim()
         },
-        notes: 'Drinks Tab Order'
+        notes: 'Drinks Tab Order',
+        idempotencyKey
       }
 
       const res = await api.post(`/public/billing/${slug}/drinks/sale`, payload)
@@ -324,6 +333,7 @@ export default function DrinksTab({ slug, restaurantData, onBillGenerated }: Dri
       })
     } finally {
       setIsProcessingSale(false)
+      setTimeout(() => { isSubmittingSaleRef.current = false }, 1000)
     }
   }
 
