@@ -37,7 +37,16 @@ const NUMBER_WORDS: Record<string, number> = {
 // Common spoken food synonyms and phonetic aliases in Indian restaurant POS
 const COMMON_ALIASES: [RegExp, string][] = [
   // Biryani normalizations (biryani / briyani -> biriyani)
-  [/\bbiryani\b|\bbriyani\b/gi, 'biriyani'],
+  [/\bbiryani\b|\bbriyani\b|\bbiriyanis\b/gi, 'biriyani'],
+  // Naan variations (nan / nans -> naan)
+  [/\bnan\b|\bnans\b/gi, 'naan'],
+  [/\bnaans\b/gi, 'naan'],
+  // Roti variations
+  [/\brotis\b|\broties\b/gi, 'roti'],
+  // Parotta variations
+  [/\bparotta\b|\bporotta\b|\bparatha\b|\bparathas\b/gi, 'parota'],
+  // Kulcha variations
+  [/\bkulchas\b/gi, 'kulcha'],
   // Popular dish aliases
   [/\bbutter\s+chicken\b/gi, 'chicken butter masala'],
   [/\bpaneer\s+butter\b(?!\s+masala)/gi, 'paneer butter masala'],
@@ -66,6 +75,8 @@ const FILLER_WORDS = new Set([
   'cup', 'cups', 'order', 'orders', 'piece', 'pieces', 'can', 'cans',
   'please', 'give', 'me', 'want', 'table', 'add', 'and', 'with', 'bring'
 ]);
+
+const PREFIXES_TO_STRIP = ['mystery ', 'special ', 'chef special ', 'daba special ', 'our '];
 
 function cleanText(text: string): string {
   return text
@@ -106,6 +117,20 @@ function buildPreparedDishes(allDishes: any[]): PreparedDish[] {
     const noParens = rawName.replace(/\([^)]*\)/g, ' ').trim();
     if (noParens && noParens !== rawName) {
       variants.push(noParens);
+    }
+
+    // Strip cafe name / special prefix e.g. "Mystery Chicken Dum Biriyani" -> "Chicken Dum Biriyani"
+    for (const pfx of PREFIXES_TO_STRIP) {
+      const lower = rawName.toLowerCase();
+      if (lower.startsWith(pfx)) {
+        const stripped = rawName.slice(pfx.length).trim();
+        if (stripped) variants.push(stripped);
+      }
+    }
+
+    // Direct alias for Dum Biriyani
+    if (rawName.toLowerCase().includes('dum biriyani') || rawName.toLowerCase().includes('dum biryani')) {
+      variants.push('dum biriyani');
     }
 
     for (const v of variants) {
@@ -208,11 +233,27 @@ export function parseSpokenDishes(transcript: string, allDishes: any[]): { dish:
     }
   }
 
-  // Fallback: If "biryani" was spoken alone without a prefix, match default Chicken Biriyani
+  // Smarter fallback: If "biryani" was spoken alone without a recognized combo
   if (norm.includes('biriyani') && results.length === 0) {
-    const defaultBiryani = allDishes.find(d => d.name?.toLowerCase().includes('biriyani'));
+    let defaultBiryani: any = null;
+    if (norm.includes('rice')) {
+      defaultBiryani = allDishes.find(d => d.name?.toLowerCase().includes('biriyani') && d.name?.toLowerCase().includes('rice'));
+    } else {
+      defaultBiryani = (
+        allDishes.find(d => d.name?.toLowerCase().includes('chicken') && d.name?.toLowerCase().includes('biriyani')) ||
+        allDishes.find(d => d.name?.toLowerCase().includes('biriyani') && !d.name?.toLowerCase().includes('rice'))
+      );
+    }
+
     if (defaultBiryani) {
-      results.push({ dish: defaultBiryani, quantity: 1 });
+      let qty = 1;
+      for (const tok of tokens) {
+        if (tok in NUMBER_WORDS) {
+          qty = NUMBER_WORDS[tok];
+          break;
+        }
+      }
+      results.push({ dish: defaultBiryani, quantity: qty });
     }
   }
 
