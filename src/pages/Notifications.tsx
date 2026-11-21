@@ -150,11 +150,18 @@ export default function Notifications() {
       const res = await api.post(`/restaurants/${restaurantId}/whatsapp/qr`)
       const d = res.data.data
       setWhatsappStatus(d.status)
-      if (d.qrCode) setWhatsappQrCode(d.qrCode)
-      toast({
-        title: "QR Code Ready",
-        description: "Open WhatsApp on your phone and scan the QR code to link your device.",
-      })
+      if (d.qrCode) {
+        setWhatsappQrCode(d.qrCode)
+        toast({
+          title: "QR Code Ready",
+          description: "Open WhatsApp on your phone and scan the QR code to link your device.",
+        })
+      } else {
+        toast({
+          title: "Generating QR Code...",
+          description: "Connecting to WhatsApp servers. The QR code will appear in a moment.",
+        })
+      }
     } catch (err: any) {
       toast({
         title: "Could not generate QR code",
@@ -451,7 +458,7 @@ export default function Notifications() {
                       </h4>
                       <ol className="list-decimal pl-5 space-y-1.5 text-xs md:text-sm text-gray-600">
                         <li>Open WhatsApp on your restaurant or manager phone.</li>
-                        <li>Tap <strong>Settings (or ⋮ Three Dots)</strong> $\rightarrow$ <strong>Linked Devices</strong>.</li>
+                        <li>Tap <strong>Settings (or ⋮ Three Dots)</strong> → <strong>Linked Devices</strong>.</li>
                         <li>Tap <strong>Link a Device</strong> and point your camera at the QR code.</li>
                       </ol>
 
